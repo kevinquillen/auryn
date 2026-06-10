@@ -7,6 +7,7 @@
 //! providers are added by implementing this trait and registering them in
 //! [`build_registry`]; no TUI or CLI code changes are required.
 
+pub mod claude;
 pub mod fake;
 
 use std::process::Command;
@@ -59,6 +60,12 @@ pub fn build_registry(config: &AppConfig) -> Vec<Box<dyn Provider>> {
     providers
 }
 
-/// Registers the real, on-disk providers enabled in `config`. Empty until the
-/// Claude (Phase 3), Codex, and Gemini (Phase 5) scanners land.
-fn register_real_providers(_config: &AppConfig, _providers: &mut Vec<Box<dyn Provider>>) {}
+/// Registers the real, on-disk providers enabled in `config`. Codex and Gemini
+/// (Phase 5) join Claude here as they land.
+fn register_real_providers(config: &AppConfig, providers: &mut Vec<Box<dyn Provider>>) {
+    if config.providers.claude.enabled {
+        providers.push(Box::new(claude::ClaudeProvider::from_settings(
+            &config.providers.claude,
+        )));
+    }
+}
