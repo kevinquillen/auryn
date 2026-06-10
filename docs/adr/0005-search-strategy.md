@@ -32,14 +32,32 @@ an optional provider restriction with an optional free-text query; text matching
 is case-insensitive and term-wise conjunctive across a session's searchable text
 (name, provider, project path, and preview content). For the session counts a
 single user accumulates locally this is effectively instant and requires no
-index build, cache invalidation, or extra dependency. Fuzzy ranking, regex, and
-a persistent full-text index are layered on in later phases behind the same
+index build, cache invalidation, or extra dependency. Regex, boolean queries,
+and a persistent full-text index remain future work behind the same
 `Filter`/search API without changing callers.
+
+### Realized matching (Phase 6)
+
+Within the in-memory strategy, each query term is matched two ways, mirroring
+the spec's split between metadata and content search:
+
+* **Metadata** (name, provider, project path) is matched *fuzzily* via
+  `fuzzy-matcher` (SkimMatcherV2), so short or mistyped queries still find a
+  title and the fuzzy score provides ranking.
+* **Content** (conversation text) is matched as a case-insensitive *substring*
+  ("equivalent to grep" per the spec), avoiding the noise of fuzzy-subsequence
+  matches across large transcripts.
+
+Terms are conjunctive (all must match); metadata hits contribute their fuzzy
+score and content-only hits a floor score, so results rank title matches above
+content matches. With no query, recency order is preserved.
 
 ### Consequences
 
 * Good: zero index-maintenance cost; nothing to invalidate when sessions change.
-* Good: trivially testable; the matcher is a pure function over a `Session`.
+* Good: trivially testable; scoring is a pure function over text.
+* Good: the metadata-fuzzy/content-grep split keeps fuzzy's forgiveness for
+  titles without flooding results with incidental content subsequences.
 * Bad: a full content scan over very large histories will eventually want an
   index; the API is shaped so that change stays internal to `search/`.
 
