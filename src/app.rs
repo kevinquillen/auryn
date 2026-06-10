@@ -10,7 +10,7 @@ use std::process::Command;
 
 use crate::config::AppConfig;
 use crate::errors::{AurynError, Result};
-use crate::models::Session;
+use crate::models::{ProviderKind, Session};
 use crate::providers::{self, Provider};
 use crate::search::Filter;
 
@@ -68,20 +68,37 @@ impl App {
         outcome
     }
 
-    /// Builds the native resume command for the session with the given id.
-    pub fn resume_command(&self, session_id: &str) -> Result<Command> {
-        let outcome = self.scan_all();
-        let session = outcome
-            .sessions
-            .into_iter()
-            .find(|s| s.id == session_id)
-            .ok_or_else(|| AurynError::UnknownSession(session_id.to_string()))?;
+    /// Builds the native resume command for an already-loaded session, without
+    /// re-scanning. The TUI uses this: it already holds the selected session.
+    pub fn resume_command_for(&self, session: &Session) -> Result<Command> {
         let provider = self
             .providers
             .iter()
             .find(|p| p.kind() == session.provider)
-            .ok_or_else(|| AurynError::UnknownSession(session_id.to_string()))?;
-        provider.resume_command(&session, &self.config)
+            .ok_or_else(|| AurynError::UnknownSession(session.id.clone()))?;
+        provider.resume_command(session, &self.config)
+    }
+
+    /// Builds the native resume command for a session id (the CLI path). Only
+    /// the provider named by the id prefix (e.g. `claude:`) is scanned, so a
+    /// resume does not re-parse the other providers' sessions.
+    pub fn resume_command(&self, session_id: &str) -> Result<Command> {
+        let wanted = session_id
+            .split_once(':')
+            .and_then(|(prefix, _)| prefix.parse::<ProviderKind>().ok());
+
+        for provider in &self.providers {
+            if let Some(kind) = wanted
+                && provider.kind() != kind
+            {
+                continue;
+            }
+            let sessions = provider.scan(&self.config)?;
+            if let Some(session) = sessions.into_iter().find(|s| s.id == session_id) {
+                return provider.resume_command(&session, &self.config);
+            }
+        }
+        Err(AurynError::UnknownSession(session_id.to_string()))
     }
 }
 

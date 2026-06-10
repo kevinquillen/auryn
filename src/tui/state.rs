@@ -135,6 +135,11 @@ impl TuiState {
         self.visible.get(self.selected).map(|&i| &self.sessions[i])
     }
 
+    /// Looks up an already-scanned session by its Auryn id, without re-scanning.
+    pub fn session_by_id(&self, id: &str) -> Option<&Session> {
+        self.sessions.iter().find(|s| s.id == id)
+    }
+
     // --- Navigation ---------------------------------------------------------
 
     /// Moves the selection down by one, stopping at the last visible session.
