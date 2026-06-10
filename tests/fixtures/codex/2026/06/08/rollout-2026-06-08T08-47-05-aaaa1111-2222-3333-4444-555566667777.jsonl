@@ -1,0 +1,12 @@
+{"type":"session_meta","timestamp":"2026-06-08T12:00:00.000Z","payload":{"id":"aaaa1111-2222-3333-4444-555566667777","cwd":"/home/dev/projects/service","cli_version":"1.0.0"}}
+{"type":"response_item","timestamp":"2026-06-08T12:00:00.500Z","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"# AGENTS.md instructions for /home/dev/projects/service\n\n## Build\nUse make to build the project."}]}}
+{"type":"response_item","timestamp":"2026-06-08T12:00:01.000Z","payload":{"type":"message","role":"developer","content":[{"type":"input_text","text":"You are a helpful assistant."}]}}
+{"type":"response_item","timestamp":"2026-06-08T12:00:05.000Z","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"How should the service handle configuration?"}]}}
+{"type":"response_item","timestamp":"2026-06-08T12:00:06.000Z","payload":{"type":"reasoning","summary":[]}}
+{"type":"response_item","timestamp":"2026-06-08T12:00:10.000Z","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Store configuration in a single file with sensible defaults."}]}}
+{"type":"response_item","timestamp":"2026-06-08T12:00:11.000Z","payload":{"type":"function_call","name":"shell"}}
+{"type":"event_msg","timestamp":"2026-06-08T12:00:12.000Z","payload":{"type":"token_count"}}
+{"type":"response_item","timestamp":"2026-06-08T12:30:00.000Z","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"Which environments are affected?"}]}}
+{"type":"response_item","timestamp":"2026-06-08T12:30:01.000Z","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"<turn_aborted>The user interrupted the previous turn.</turn_aborted>"}]}}
+{"type":"response_item","timestamp":"2026-06-08T12:30:05.000Z","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Both staging and production are affected."}]}}
+{ this line is intentionally corrupt and must be skipped
