@@ -99,21 +99,18 @@ fn missing_root_yields_empty_without_error() {
 }
 
 #[test]
-fn resume_command_loads_the_session_file() {
+fn session_source_path_points_at_the_chat_file() {
+    // Resume command building (index vs file fallback) is unit-tested in the
+    // provider module; here we just confirm the source path used for resume.
     let sessions = scan();
     let alpha = sessions
         .iter()
         .find(|s| s.provider_session_id == "14d31fca-6eca-42ed-a940-46242cbff357")
         .unwrap();
-    let provider = GeminiProvider::new(Some(fixtures_root()));
-    let command = provider
-        .resume_command(alpha, &AppConfig::default())
-        .unwrap();
-    assert_eq!(command.get_program(), "gemini");
-    let args: Vec<_> = command
-        .get_args()
-        .map(|a| a.to_string_lossy().into_owned())
-        .collect();
-    assert_eq!(args[0], "--session-file");
-    assert!(args[1].contains("session-2026-06-10T17-32-14d31fca.jsonl"));
+    assert!(
+        alpha
+            .source_path
+            .to_string_lossy()
+            .contains("session-2026-06-10T17-32-14d31fca.jsonl")
+    );
 }

@@ -18,7 +18,14 @@
 //! Because a streaming message is rewritten under the same `id`, messages are
 //! de-duplicated by id (last write wins) and ordered by timestamp. Gemini
 //! injects a `<session_context>` user turn, which is filtered out like Codex's
-//! AGENTS.md context. Resume loads the exact file via `gemini --session-file`.
+//! AGENTS.md context.
+//!
+//! Gemini 0.46 has no resume-by-id, and continuing a session forks a new one
+//! (a new id sharing the same conversation origin). Resume uses the fast
+//! `gemini --session-file <path>`; [`collapse_forks`] then hides the resulting
+//! near-duplicate lineage in the list by keeping the most recent of a project's
+//! same-start-second sessions. (The in-place `--resume <index>` path is avoided
+//! because `gemini --list-sessions` is prohibitively slow.)
 
 use std::collections::HashMap;
 use std::ffi::OsStr;
@@ -115,12 +122,14 @@ impl Provider for GeminiProvider {
                 }
             }
         }
-        Ok(sessions)
+        Ok(collapse_forks(sessions))
     }
 
     fn resume_command(&self, session: &Session, _config: &AppConfig) -> Result<Command> {
-        // Shell-free: load the exact session file. `--session-file` resumes a
-        // specific session regardless of its (project-relative) list index.
+        // Gemini 0.46 has no resume-by-id. `--session-file` loads the exact
+        // session file; continuing it forks a new session (a Gemini behavior),
+        // which `collapse_forks` hides in the list. The in-place `--resume
+        // <index>` path is avoided because `gemini --list-sessions` is very slow.
         let mut command = Command::new(RESUME_BIN);
         command.arg("--session-file").arg(&session.source_path);
         if let Some(path) = &session.project_path {
@@ -128,6 +137,36 @@ impl Provider for GeminiProvider {
         }
         Ok(command)
     }
+}
+
+/// Collapses Gemini fork lineages for display. Continuing a Gemini session
+/// creates a new session id sharing the same conversation origin, so repeated
+/// resumes pile up near-identical entries. Sessions in the same project whose
+/// start time falls within the same second are treated as one lineage, keeping
+/// only the most recently used. Sessions without a start time are left as-is.
+fn collapse_forks(sessions: Vec<Session>) -> Vec<Session> {
+    use std::collections::HashMap;
+    let mut newest: HashMap<(String, i64), Session> = HashMap::new();
+    let mut ungrouped: Vec<Session> = Vec::new();
+    for session in sessions {
+        let Some(began) = session.date_began else {
+            ungrouped.push(session);
+            continue;
+        };
+        let project = session
+            .project_path
+            .as_ref()
+            .map(|p| p.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        let key = (project, began.timestamp());
+        match newest.get(&key) {
+            Some(existing) if existing.date_last_used >= session.date_last_used => {}
+            _ => {
+                newest.insert(key, session);
+            }
+        }
+    }
+    newest.into_values().chain(ungrouped).collect()
 }
 
 /// Returns the immediate subdirectories of `dir`, tolerating IO errors.
@@ -388,29 +427,62 @@ mod tests {
         assert!(!is_injected_context("How do I run the tests?"));
     }
 
-    #[test]
-    fn resume_command_loads_the_session_file() {
-        let provider = GeminiProvider::new(None);
-        let session = Session {
-            id: "gemini:abc".to_string(),
+    fn session(id: &str, source: &str) -> Session {
+        Session {
+            id: format!("gemini:{id}"),
             provider: ProviderKind::Gemini,
-            provider_session_id: "abc".to_string(),
+            provider_session_id: id.to_string(),
             session_name: "x".to_string(),
             project_path: Some(PathBuf::from("/tmp/proj")),
             date_began: None,
             date_last_used: None,
             message_count: 1,
             preview_messages: Vec::new(),
-            source_path: PathBuf::from("/tmp/chats/session-x.jsonl"),
-        };
+            source_path: PathBuf::from(source),
+        }
+    }
+
+    #[test]
+    fn resume_loads_the_session_file() {
+        let provider = GeminiProvider::new(None);
         let command = provider
-            .resume_command(&session, &AppConfig::default())
+            .resume_command(&session("abc", "/tmp/chats/s.jsonl"), &AppConfig::default())
             .unwrap();
         assert_eq!(command.get_program(), "gemini");
         let args: Vec<_> = command
             .get_args()
             .map(|a| a.to_string_lossy().into_owned())
             .collect();
-        assert_eq!(args, ["--session-file", "/tmp/chats/session-x.jsonl"]);
+        assert_eq!(args, ["--session-file", "/tmp/chats/s.jsonl"]);
+    }
+
+    #[test]
+    fn collapse_forks_keeps_newest_of_a_same_second_lineage() {
+        use chrono::{TimeZone, Utc};
+        let began = Utc.timestamp_opt(1_000_000_000, 163_000_000).unwrap();
+        // Same began-second; a fork is 1ms later. Different last-used.
+        let mut original = session("orig", "/g/orig.jsonl");
+        original.date_began = Some(began);
+        original.date_last_used = Some(Utc.timestamp_opt(1_000_000_100, 0).unwrap());
+
+        let mut fork = session("fork", "/g/fork.jsonl");
+        fork.date_began = Some(began + chrono::Duration::milliseconds(1));
+        fork.date_last_used = Some(Utc.timestamp_opt(1_000_009_999, 0).unwrap());
+
+        // A genuinely different session (different project) is not merged.
+        let mut other = session("other", "/g/other.jsonl");
+        other.project_path = Some(PathBuf::from("/other/proj"));
+        other.date_began = Some(began);
+        other.date_last_used = Some(Utc.timestamp_opt(1_000_000_050, 0).unwrap());
+
+        let collapsed = collapse_forks(vec![original, fork, other]);
+        let ids: std::collections::HashSet<_> = collapsed
+            .iter()
+            .map(|s| s.provider_session_id.clone())
+            .collect();
+        assert_eq!(collapsed.len(), 2);
+        assert!(ids.contains("fork")); // newest of the lineage survives
+        assert!(ids.contains("other")); // different project untouched
+        assert!(!ids.contains("orig")); // older lineage member collapsed away
     }
 }

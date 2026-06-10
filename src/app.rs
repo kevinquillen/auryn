@@ -58,6 +58,7 @@ impl App {
             }
         }
         sort_by_recency(&mut sessions);
+        dedup_by_id(&mut sessions);
         ScanOutcome { sessions, errors }
     }
 
@@ -123,6 +124,14 @@ fn sort_by_recency(sessions: &mut [Session]) {
     });
 }
 
+/// Removes sessions whose Auryn id was already seen, keeping the first (the
+/// most recent, since the list is recency-sorted). Guards against a provider
+/// that writes more than one file for the same session id.
+fn dedup_by_id(sessions: &mut Vec<Session>) {
+    let mut seen = std::collections::HashSet::new();
+    sessions.retain(|s| seen.insert(s.id.clone()));
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -164,5 +173,21 @@ mod tests {
         sort_by_recency(&mut sessions);
         let order: Vec<_> = sessions.iter().map(|s| s.session_name.as_str()).collect();
         assert_eq!(order, ["alpha", "zebra"]);
+    }
+
+    #[test]
+    fn dedup_keeps_first_occurrence_of_each_id() {
+        // Two entries share an id (e.g. a provider's twin files); the second is
+        // dropped. Recency sort runs first, so the survivor is the most recent.
+        let mut sessions = vec![
+            session("dup", Some(300)),
+            session("unique", Some(200)),
+            session("dup", Some(100)),
+        ];
+        sort_by_recency(&mut sessions);
+        dedup_by_id(&mut sessions);
+        assert_eq!(sessions.len(), 2);
+        let ids: Vec<_> = sessions.iter().map(|s| s.id.as_str()).collect();
+        assert_eq!(ids, ["dup", "unique"]);
     }
 }
