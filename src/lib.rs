@@ -11,6 +11,7 @@ pub mod cli;
 pub mod config;
 pub mod errors;
 pub mod format;
+pub mod launcher;
 pub mod models;
 pub mod paths;
 pub mod providers;
