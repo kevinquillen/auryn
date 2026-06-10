@@ -101,10 +101,7 @@ pub fn run() -> Result<i32> {
 fn run_tui() -> Result<i32> {
     let app = App::load()?;
     match crate::tui::run(&app)? {
-        Some(session_id) => {
-            let command = app.resume_command(&session_id)?;
-            crate::launcher::run(command)
-        }
+        Some(command) => crate::launcher::run(command),
         None => Ok(0),
     }
 }

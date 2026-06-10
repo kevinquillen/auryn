@@ -12,6 +12,8 @@ pub mod event;
 pub mod state;
 pub mod view;
 
+use std::process::Command;
+
 use ratatui::DefaultTerminal;
 use ratatui::crossterm::event as term_event;
 
@@ -21,8 +23,9 @@ use event::Action;
 use state::TuiState;
 
 /// Launches the interface, runs until the user quits or chooses to resume, and
-/// restores the terminal. Returns the Auryn id of a session to resume, if any.
-pub fn run(app: &App) -> Result<Option<String>> {
+/// restores the terminal. Returns the resume command for the chosen session
+/// (built from the already-scanned session, with no re-scan), or `None`.
+pub fn run(app: &App) -> Result<Option<Command>> {
     let outcome = app.scan_all();
     let mut state = TuiState::new(outcome.sessions);
     if !outcome.errors.is_empty() {
@@ -38,19 +41,25 @@ pub fn run(app: &App) -> Result<Option<String>> {
     result
 }
 
-/// The redraw-and-handle loop. Returns the session id to resume, or `None`.
+/// The redraw-and-handle loop. Returns the resume command, or `None`.
 fn run_loop(
     terminal: &mut DefaultTerminal,
     app: &App,
     state: &mut TuiState,
-) -> Result<Option<String>> {
+) -> Result<Option<Command>> {
     loop {
         terminal.draw(|frame| view::render(frame, state))?;
 
         if let term_event::Event::Key(key) = term_event::read()? {
             match event::handle_key(state, key) {
                 Action::Quit => return Ok(None),
-                Action::Resume(session_id) => return Ok(Some(session_id)),
+                Action::Resume(session_id) => {
+                    // Build the command from the session already in hand; no
+                    // need to re-scan providers to find it again.
+                    if let Some(session) = state.session_by_id(&session_id) {
+                        return Ok(Some(app.resume_command_for(session)?));
+                    }
+                }
                 Action::Refresh => {
                     let outcome = app.scan_all();
                     state.set_sessions(outcome.sessions);
