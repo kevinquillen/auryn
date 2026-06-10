@@ -146,11 +146,12 @@ fn config_print_shows_defaults() {
 }
 
 #[test]
-fn resume_reports_shell_free_command() {
+fn resume_executes_provider_command_and_returns_its_code() {
+    // The fake provider's resume command is `echo resume <id>`, so a successful
+    // hand-off prints that line and exits 0.
     let out = auryn(&["resume", "fake:fixture-valid-001"], true);
     assert!(out.status.success());
-    let text = stdout(&out);
-    assert!(text.contains("Would resume by running: echo resume fake:fixture-valid-001"));
+    assert!(stdout(&out).contains("resume fake:fixture-valid-001"));
 }
 
 #[test]

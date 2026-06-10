@@ -95,15 +95,15 @@ pub fn run() -> Result<i32> {
     }
 }
 
-/// Launches the interactive TUI. On exit it either resumes the chosen session
-/// (printed for now; real terminal hand-off lands in Phase 4) or returns.
+/// Launches the interactive TUI. The TUI restores the terminal before
+/// returning, so on a resume request we hand off directly to the provider's CLI
+/// and return its exit code; otherwise we just exit.
 fn run_tui() -> Result<i32> {
     let app = App::load()?;
     match crate::tui::run(&app)? {
         Some(session_id) => {
             let command = app.resume_command(&session_id)?;
-            println!("Would resume by running: {}", render_command(&command));
-            Ok(0)
+            crate::launcher::run(command)
         }
         None => Ok(0),
     }
@@ -125,10 +125,8 @@ fn cmd_filter(query: &str, json: bool) -> Result<i32> {
 fn cmd_resume(session_id: &str) -> Result<i32> {
     let app = App::load()?;
     let command = app.resume_command(session_id)?;
-    // Real terminal hand-off lands in Phase 4; for now report the exact,
-    // shell-free command Auryn would launch so the plumbing is verifiable.
-    println!("Would resume by running: {}", render_command(&command));
-    Ok(0)
+    // Hand off the terminal to the provider's CLI and return its exit code.
+    crate::launcher::run(command)
 }
 
 fn cmd_doctor() -> Result<i32> {
@@ -304,15 +302,6 @@ fn push_row(out: &mut String, cells: &[String; 5], widths: &[usize; 5]) {
     // Trim trailing padding on the final column for clean output.
     out.push_str(line.trim_end());
     out.push('\n');
-}
-
-/// Renders a built command for display without ever executing it.
-fn render_command(command: &Command) -> String {
-    let mut parts = vec![command.get_program().to_string_lossy().to_string()];
-    for arg in command.get_args() {
-        parts.push(arg.to_string_lossy().to_string());
-    }
-    parts.join(" ")
 }
 
 #[cfg(test)]
