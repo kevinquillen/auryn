@@ -15,3 +15,4 @@ pub mod models;
 pub mod paths;
 pub mod providers;
 pub mod search;
+pub mod tui;
