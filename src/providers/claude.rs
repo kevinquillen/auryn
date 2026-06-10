@@ -27,6 +27,9 @@ use crate::config::{AppConfig, ProviderSettings};
 use crate::errors::Result;
 use crate::models::{MessagePreview, ProviderKind, Role, Session};
 use crate::providers::Provider;
+use crate::providers::util::{
+    max_opt, min_opt, normalize_whitespace, parse_timestamp, truncate_chars,
+};
 
 /// Environment override for the scan root, used for tests and non-standard
 /// installs. Takes effect only when the config does not set an explicit root.
@@ -318,43 +321,6 @@ fn flag(record: &Value, key: &str) -> bool {
     record.get(key).and_then(Value::as_bool).unwrap_or(false)
 }
 
-/// Parses an RFC 3339 timestamp into UTC.
-fn parse_timestamp(raw: &str) -> Option<DateTime<Utc>> {
-    DateTime::parse_from_rfc3339(raw)
-        .ok()
-        .map(|dt| dt.with_timezone(&Utc))
-}
-
-fn min_opt(current: Option<DateTime<Utc>>, candidate: DateTime<Utc>) -> DateTime<Utc> {
-    match current {
-        Some(existing) if existing <= candidate => existing,
-        _ => candidate,
-    }
-}
-
-fn max_opt(current: Option<DateTime<Utc>>, candidate: DateTime<Utc>) -> DateTime<Utc> {
-    match current {
-        Some(existing) if existing >= candidate => existing,
-        _ => candidate,
-    }
-}
-
-/// Collapses all runs of whitespace (including newlines) into single spaces so
-/// a value can be shown on one table row.
-fn normalize_whitespace(text: &str) -> String {
-    text.split_whitespace().collect::<Vec<_>>().join(" ")
-}
-
-/// Truncates `text` to at most `max` characters, appending an ellipsis when cut.
-fn truncate_chars(text: &str, max: usize) -> String {
-    if text.chars().count() <= max {
-        return text.to_string();
-    }
-    let mut out: String = text.chars().take(max).collect();
-    out.push('\u{2026}');
-    out
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -373,22 +339,6 @@ mod tests {
 
         let tool_only = serde_json::json!([{"type": "tool_use", "name": "Bash"}]);
         assert_eq!(extract_text(Some(&tool_only)), "");
-    }
-
-    #[test]
-    fn truncate_appends_ellipsis_only_when_needed() {
-        assert_eq!(truncate_chars("short", 10), "short");
-        assert_eq!(truncate_chars("abcdef", 3), "abc\u{2026}");
-    }
-
-    #[test]
-    fn timestamp_parsing_handles_fractional_seconds() {
-        let ts = parse_timestamp("2026-06-10T13:38:10.261Z").unwrap();
-        assert_eq!(
-            ts.to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
-            "2026-06-10T13:38:10.261Z"
-        );
-        assert!(parse_timestamp("not a date").is_none());
     }
 
     #[test]

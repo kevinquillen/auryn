@@ -8,7 +8,9 @@
 //! [`build_registry`]; no TUI or CLI code changes are required.
 
 pub mod claude;
+pub mod codex;
 pub mod fake;
+pub(crate) mod util;
 
 use std::process::Command;
 
@@ -66,6 +68,11 @@ fn register_real_providers(config: &AppConfig, providers: &mut Vec<Box<dyn Provi
     if config.providers.claude.enabled {
         providers.push(Box::new(claude::ClaudeProvider::from_settings(
             &config.providers.claude,
+        )));
+    }
+    if config.providers.codex.enabled {
+        providers.push(Box::new(codex::CodexProvider::from_settings(
+            &config.providers.codex,
         )));
     }
 }
