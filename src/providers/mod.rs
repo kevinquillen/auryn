@@ -10,6 +10,7 @@
 pub mod claude;
 pub mod codex;
 pub mod fake;
+pub mod gemini;
 pub(crate) mod util;
 
 use std::process::Command;
@@ -73,6 +74,11 @@ fn register_real_providers(config: &AppConfig, providers: &mut Vec<Box<dyn Provi
     if config.providers.codex.enabled {
         providers.push(Box::new(codex::CodexProvider::from_settings(
             &config.providers.codex,
+        )));
+    }
+    if config.providers.gemini.enabled {
+        providers.push(Box::new(gemini::GeminiProvider::from_settings(
+            &config.providers.gemini,
         )));
     }
 }
