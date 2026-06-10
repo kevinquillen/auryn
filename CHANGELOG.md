@@ -1,0 +1,38 @@
+# Changelog
+
+All notable changes to Auryn are documented here. The format is based on Keep a
+Changelog, and this project adheres to Semantic Versioning.
+
+## [Unreleased]
+
+### Added
+
+* Core models, TOML configuration, and platform path handling.
+* Provider plugin system with a normalized session model.
+* Claude Code, OpenAI Codex CLI, and Gemini CLI providers.
+* Synthetic fake provider for development and architecture validation.
+* Ratatui terminal interface: session table, independently scrolling preview
+  pane, slash-command framework, help and details overlays, provider cycling,
+  and terminal-native color accents.
+* Resume hand-off that launches the provider's native CLI attached to the
+  terminal and returns its exit code.
+* Command-line interface: `list`, `filter`, `search`, `resume`, `doctor`, and
+  `config` subcommands, with `--json` output.
+* Fuzzy metadata search and substring content search with ranked results.
+* Release distribution configuration for GitHub Releases, Homebrew, and Scoop.
+
+### Fixed
+
+* Codex sessions: injected AGENTS.md and environment context are excluded from
+  the session name, count, and preview.
+* Gemini sessions: streamed message rewrites are de-duplicated by id, and fork
+  lineages created on resume are collapsed in the list.
+
+### Performance
+
+* Resume builds its command from the already-selected session in the TUI and
+  scans only the relevant provider on the command line, avoiding a full re-scan.
+
+## [0.1.0] - Unreleased
+
+Initial development release.
