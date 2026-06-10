@@ -38,7 +38,7 @@ fn parses_title_count_dates_and_preview() {
         .expect("widget session present");
 
     assert_eq!(widget.id, "claude:11111111-1111-1111-1111-111111111111");
-    assert_eq!(widget.session_name, "Recursive CTE Support");
+    assert_eq!(widget.session_name, "Open Tasks Review");
     assert_eq!(
         widget.project_path,
         Some(PathBuf::from("/home/dev/projects/widget"))
@@ -53,11 +53,11 @@ fn parses_title_count_dates_and_preview() {
     assert!(
         widget.preview_messages[0]
             .content
-            .contains("recursive CTE support")
+            .contains("review the open tasks")
     );
     let last = widget.preview_messages.last().unwrap();
     assert_eq!(last.role, Role::Assistant);
-    assert!(last.content.contains("Both support recursive CTEs"));
+    assert!(last.content.contains("Both staging and production"));
 
     assert_eq!(
         widget.date_began.unwrap().to_rfc3339(),
@@ -79,7 +79,7 @@ fn session_name_falls_back_to_first_user_message() {
     // No ai-title record, so the name comes from the first user message.
     assert_eq!(
         blog.session_name,
-        "Draft an outline for a post on local-first tools."
+        "Draft an outline for an article on developer tools."
     );
     assert_eq!(blog.message_count, 2);
 }

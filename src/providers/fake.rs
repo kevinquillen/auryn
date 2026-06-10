@@ -182,52 +182,52 @@ fn preview_from(messages: Vec<FakeMessage>, turns: usize) -> Vec<MessagePreview>
 fn builtin_sessions(preview_turns: usize) -> Vec<Session> {
     [
         FakeSessionFile {
-            id: "drupal-graph-0001".to_string(),
-            name: "Drupal Graph".to_string(),
-            project_path: Some(PathBuf::from("/home/dev/projects/drupal-graph")),
+            id: "alpha-notes-0001".to_string(),
+            name: "Alpha Notes".to_string(),
+            project_path: Some(PathBuf::from("/home/dev/projects/alpha")),
             date_began: Some(at(2026, 6, 2, 9, 15)),
             date_last_used: Some(at(2026, 6, 10, 11, 55)),
             message_count: Some(87),
             messages: turns(&[
-                (Role::User, "We need recursive CTE support in Drupal."),
+                (Role::User, "Can you outline the next steps for this project?"),
                 (
                     Role::Assistant,
-                    "The database abstraction layer currently lacks a first-class way to express recursive common table expressions.",
+                    "Here are the next steps, grouped by priority so we can tackle them in order.",
                 ),
-                (Role::User, "How would MySQL differ from PostgreSQL?"),
+                (Role::User, "Which item should we start with first?"),
                 (
                     Role::Assistant,
-                    "Both support recursive CTEs, but the syntax and optimizer behavior differ in a few important ways.",
+                    "I recommend starting with the highest-priority item before the rest.",
                 ),
             ]),
         },
         FakeSessionFile {
-            id: "mcp-auth-0002".to_string(),
-            name: "MCP Authentication".to_string(),
-            project_path: Some(PathBuf::from("/home/dev/projects/mcp-server")),
+            id: "service-setup-0002".to_string(),
+            name: "Service Setup".to_string(),
+            project_path: Some(PathBuf::from("/home/dev/projects/service")),
             date_began: Some(at(2026, 6, 5, 14, 0)),
             date_last_used: Some(at(2026, 6, 10, 11, 0)),
             message_count: Some(22),
             messages: turns(&[
-                (Role::User, "How should the MCP server authenticate clients?"),
+                (Role::User, "How should the service handle its configuration?"),
                 (
                     Role::Assistant,
-                    "You can support OAuth-style token exchange or a simpler bearer token, depending on your trust model.",
+                    "Store configuration in a single file with sensible defaults for each setting.",
                 ),
             ]),
         },
         FakeSessionFile {
-            id: "blog-outline-0003".to_string(),
-            name: "Blog Outline".to_string(),
-            project_path: Some(PathBuf::from("/home/dev/writing/blog")),
+            id: "article-outline-0003".to_string(),
+            name: "Article Outline".to_string(),
+            project_path: Some(PathBuf::from("/home/dev/writing/article")),
             date_began: Some(at(2026, 6, 7, 8, 30)),
             date_last_used: Some(at(2026, 6, 9, 12, 0)),
             message_count: Some(14),
             messages: turns(&[
-                (Role::User, "Draft an outline for a post on local-first tools."),
+                (Role::User, "Draft an outline for an article on developer tools."),
                 (
                     Role::Assistant,
-                    "Here is a five-section outline starting with why local-first matters.",
+                    "Here is a five-section outline to start from, beginning with the introduction.",
                 ),
             ]),
         },
@@ -278,17 +278,17 @@ mod tests {
         };
         let provider = FakeProvider::new(None);
         let sessions = provider.scan(&config).unwrap();
-        let drupal = sessions
+        let alpha = sessions
             .iter()
-            .find(|s| s.session_name == "Drupal Graph")
+            .find(|s| s.session_name == "Alpha Notes")
             .unwrap();
-        // The Drupal sample has 4 turns; only the last 2 should survive.
-        assert_eq!(drupal.preview_messages.len(), 2);
-        assert_eq!(drupal.preview_messages[0].role, Role::User);
+        // The Alpha sample has 4 turns; only the last 2 should survive.
+        assert_eq!(alpha.preview_messages.len(), 2);
+        assert_eq!(alpha.preview_messages[0].role, Role::User);
         assert!(
-            drupal.preview_messages[0]
+            alpha.preview_messages[0]
                 .content
-                .contains("MySQL differ from PostgreSQL")
+                .contains("Which item should we start with")
         );
     }
 

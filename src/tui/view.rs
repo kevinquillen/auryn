@@ -281,20 +281,20 @@ mod tests {
 
     fn session() -> Session {
         Session {
-            id: "claude:drupal".to_string(),
+            id: "claude:alpha".to_string(),
             provider: ProviderKind::Claude,
-            provider_session_id: "drupal".to_string(),
-            session_name: "Drupal Graph".to_string(),
-            project_path: Some(PathBuf::from("/home/dev/drupal")),
+            provider_session_id: "alpha".to_string(),
+            session_name: "Alpha Notes".to_string(),
+            project_path: Some(PathBuf::from("/home/dev/projects/alpha")),
             date_began: None,
             date_last_used: None,
             message_count: 87,
             preview_messages: vec![MessagePreview {
                 role: Role::User,
-                content: "We need recursive CTE support.".to_string(),
+                content: "Can you review the open tasks?".to_string(),
                 timestamp: None,
             }],
-            source_path: PathBuf::from("/tmp/drupal.json"),
+            source_path: PathBuf::from("/tmp/alpha.json"),
         }
     }
 
@@ -316,9 +316,9 @@ mod tests {
         let state = TuiState::new(vec![session()]);
         let text = render_to_string(&state);
         assert!(text.contains("Sessions"));
-        assert!(text.contains("Drupal Graph"));
+        assert!(text.contains("Alpha Notes"));
         assert!(text.contains("Preview"));
-        assert!(text.contains("recursive CTE"));
+        assert!(text.contains("review the open tasks"));
         assert!(text.contains("Enter Resume"));
     }
 
@@ -335,7 +335,7 @@ mod tests {
         state.toggle_details();
         let text = render_to_string(&state);
         assert!(text.contains("project"));
-        assert!(text.contains("/home/dev/drupal"));
+        assert!(text.contains("/home/dev/projects/alpha"));
     }
 
     #[test]

@@ -69,7 +69,7 @@ fn list_renders_fixture_sessions() {
     assert!(out.status.success());
     let text = stdout(&out);
     assert!(text.contains("Session Name"));
-    assert!(text.contains("Recursive CTE Investigation"));
+    assert!(text.contains("Task Review"));
     assert!(text.contains("Minimal Session"));
 }
 
@@ -87,18 +87,19 @@ fn list_renders_claude_fixture_sessions() {
     let out = auryn_claude(&["list"]);
     assert!(out.status.success());
     let text = stdout(&out);
-    assert!(text.contains("Recursive CTE Support"));
+    assert!(text.contains("Open Tasks Review"));
     assert!(text.contains("Claude"));
 }
 
 #[test]
 fn filter_matches_claude_conversation_content() {
-    let out = auryn_claude(&["filter", "postgresql"]);
+    let out = auryn_claude(&["filter", "environments"]);
     assert!(out.status.success());
     let text = stdout(&out);
-    // The term appears only in the widget session's conversation.
-    assert!(text.contains("Recursive CTE Support"));
-    assert!(!text.contains("local-first"));
+    // The term appears only in the widget session's conversation, so the blog
+    // session (whose name contains "outline") is excluded.
+    assert!(text.contains("Open Tasks Review"));
+    assert!(!text.contains("outline"));
 }
 
 #[test]
@@ -113,17 +114,17 @@ fn list_json_emits_parseable_array() {
 
 #[test]
 fn filter_narrows_to_matching_sessions() {
-    let out = auryn(&["filter", "recursive"], true);
+    let out = auryn(&["filter", "task review"], true);
     assert!(out.status.success());
     let text = stdout(&out);
-    assert!(text.contains("Recursive CTE Investigation"));
+    assert!(text.contains("Task Review"));
     assert!(!text.contains("Minimal Session"));
 }
 
 #[test]
 fn search_is_an_alias_for_filter() {
-    let filter = stdout(&auryn(&["filter", "recursive"], true));
-    let search = stdout(&auryn(&["search", "recursive"], true));
+    let filter = stdout(&auryn(&["filter", "task"], true));
+    let search = stdout(&auryn(&["search", "task"], true));
     assert_eq!(filter, search);
 }
 

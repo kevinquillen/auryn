@@ -134,9 +134,9 @@ mod tests {
 
     #[test]
     fn matches_session_name_case_insensitively() {
-        let s = session("Drupal Graph", ProviderKind::Claude, None, &[]);
-        assert!(Filter::none().with_text("drupal").matches(&s));
-        assert!(Filter::none().with_text("DRUPAL").matches(&s));
+        let s = session("Alpha Notes", ProviderKind::Claude, None, &[]);
+        assert!(Filter::none().with_text("alpha").matches(&s));
+        assert!(Filter::none().with_text("ALPHA").matches(&s));
     }
 
     #[test]
@@ -144,10 +144,10 @@ mod tests {
         let s = session(
             "X",
             ProviderKind::Claude,
-            Some("/home/dev/drupal-graph"),
+            Some("/home/dev/projects/widgets"),
             &[],
         );
-        assert!(Filter::none().with_text("drupal-graph").matches(&s));
+        assert!(Filter::none().with_text("widgets").matches(&s));
     }
 
     #[test]
@@ -156,23 +156,23 @@ mod tests {
             "X",
             ProviderKind::Claude,
             None,
-            &["We need recursive CTE support in Drupal."],
+            &["Please review the staging environment."],
         );
-        assert!(Filter::none().with_text("recursive cte").matches(&s));
+        assert!(Filter::none().with_text("staging environment").matches(&s));
     }
 
     #[test]
     fn all_terms_must_match() {
         let s = session(
-            "Drupal Graph",
+            "Alpha Notes",
             ProviderKind::Claude,
             None,
-            &["recursive cte"],
+            &["review the staging environment"],
         );
-        // "drupal" is in the name and "recursive" in content: both present.
-        assert!(Filter::none().with_text("drupal recursive").matches(&s));
+        // "alpha" is in the name and "staging" in content: both present.
+        assert!(Filter::none().with_text("alpha staging").matches(&s));
         // "kubernetes" appears nowhere.
-        assert!(!Filter::none().with_text("drupal kubernetes").matches(&s));
+        assert!(!Filter::none().with_text("alpha kubernetes").matches(&s));
     }
 
     #[test]
@@ -187,13 +187,13 @@ mod tests {
     #[test]
     fn apply_preserves_order_of_matches() {
         let sessions = vec![
-            session("Drupal", ProviderKind::Claude, None, &[]),
+            session("Alpha", ProviderKind::Claude, None, &[]),
             session("Other", ProviderKind::Claude, None, &[]),
-            session("Drupal Two", ProviderKind::Claude, None, &[]),
+            session("Alpha Two", ProviderKind::Claude, None, &[]),
         ];
-        let result = Filter::none().with_text("drupal").apply(sessions);
+        let result = Filter::none().with_text("alpha").apply(sessions);
         assert_eq!(result.len(), 2);
-        assert_eq!(result[0].session_name, "Drupal");
-        assert_eq!(result[1].session_name, "Drupal Two");
+        assert_eq!(result[0].session_name, "Alpha");
+        assert_eq!(result[1].session_name, "Alpha Two");
     }
 }
