@@ -1,14 +1,14 @@
 {
   "id": "fixture-valid-001",
-  "name": "Recursive CTE Investigation",
-  "project_path": "/home/dev/projects/drupal-graph",
+  "name": "Task Review",
+  "project_path": "/home/dev/projects/alpha",
   "date_began": "2026-06-01T10:00:00Z",
   "date_last_used": "2026-06-08T16:30:00Z",
   "message_count": 42,
   "messages": [
-    { "role": "user", "content": "We need recursive CTE support in Drupal.", "timestamp": "2026-06-01T10:00:00Z" },
-    { "role": "assistant", "content": "The database abstraction layer currently lacks recursive CTEs.", "timestamp": "2026-06-01T10:01:00Z" },
-    { "role": "user", "content": "How would MySQL differ from PostgreSQL?", "timestamp": "2026-06-08T16:29:00Z" },
-    { "role": "assistant", "content": "Both support recursive CTEs, but optimizer behavior differs.", "timestamp": "2026-06-08T16:30:00Z" }
+    { "role": "user", "content": "Can you review the open tasks?", "timestamp": "2026-06-01T10:00:00Z" },
+    { "role": "assistant", "content": "I reviewed the tasks and grouped them by area.", "timestamp": "2026-06-01T10:01:00Z" },
+    { "role": "user", "content": "Which environments are affected?", "timestamp": "2026-06-08T16:29:00Z" },
+    { "role": "assistant", "content": "Both staging and production are affected by the change.", "timestamp": "2026-06-08T16:30:00Z" }
   ]
 }

@@ -38,11 +38,11 @@ fn valid_session_is_fully_parsed() {
         .expect("valid fixture session present");
 
     assert_eq!(valid.id, "fake:fixture-valid-001");
-    assert_eq!(valid.session_name, "Recursive CTE Investigation");
+    assert_eq!(valid.session_name, "Task Review");
     assert_eq!(valid.message_count, 42);
     assert_eq!(
         valid.project_path,
-        Some(PathBuf::from("/home/dev/projects/drupal-graph"))
+        Some(PathBuf::from("/home/dev/projects/alpha"))
     );
     assert!(valid.date_began.is_some());
     assert!(valid.date_last_used.is_some());

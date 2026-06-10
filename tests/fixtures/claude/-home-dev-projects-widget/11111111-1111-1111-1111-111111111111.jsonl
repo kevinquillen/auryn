@@ -1,8 +1,8 @@
-{"type":"user","sessionId":"11111111-1111-1111-1111-111111111111","cwd":"/home/dev/projects/widget","timestamp":"2026-06-01T10:00:00.000Z","uuid":"u1","parentUuid":null,"message":{"role":"user","content":"We need recursive CTE support in Drupal."}}
-{"type":"assistant","sessionId":"11111111-1111-1111-1111-111111111111","timestamp":"2026-06-01T10:00:05.000Z","uuid":"a1","message":{"role":"assistant","content":[{"type":"text","text":"The database abstraction layer currently lacks recursive CTEs."}]}}
-{"type":"ai-title","aiTitle":"Recursive CTE Support","sessionId":"11111111-1111-1111-1111-111111111111"}
+{"type":"user","sessionId":"11111111-1111-1111-1111-111111111111","cwd":"/home/dev/projects/widget","timestamp":"2026-06-01T10:00:00.000Z","uuid":"u1","parentUuid":null,"message":{"role":"user","content":"Can you review the open tasks?"}}
+{"type":"assistant","sessionId":"11111111-1111-1111-1111-111111111111","timestamp":"2026-06-01T10:00:05.000Z","uuid":"a1","message":{"role":"assistant","content":[{"type":"text","text":"I grouped the open tasks by priority."}]}}
+{"type":"ai-title","aiTitle":"Open Tasks Review","sessionId":"11111111-1111-1111-1111-111111111111"}
 {"type":"user","isMeta":true,"sessionId":"11111111-1111-1111-1111-111111111111","timestamp":"2026-06-01T10:00:06.000Z","message":{"role":"user","content":"<system-reminder>ignore this meta record</system-reminder>"}}
-{"type":"user","sessionId":"11111111-1111-1111-1111-111111111111","timestamp":"2026-06-08T16:29:00.000Z","uuid":"u2","message":{"role":"user","content":[{"type":"text","text":"How would MySQL differ from PostgreSQL?"}]}}
+{"type":"user","sessionId":"11111111-1111-1111-1111-111111111111","timestamp":"2026-06-08T16:29:00.000Z","uuid":"u2","message":{"role":"user","content":[{"type":"text","text":"Which environments are affected?"}]}}
 {"type":"assistant","sessionId":"11111111-1111-1111-1111-111111111111","timestamp":"2026-06-08T16:29:02.000Z","uuid":"a2","message":{"role":"assistant","content":[{"type":"tool_use","name":"Bash","input":{"command":"ls"}}]}}
-{"type":"assistant","sessionId":"11111111-1111-1111-1111-111111111111","timestamp":"2026-06-08T16:30:00.000Z","uuid":"a3","message":{"role":"assistant","content":[{"type":"text","text":"Both support recursive CTEs, but optimizer behavior differs."}]}}
+{"type":"assistant","sessionId":"11111111-1111-1111-1111-111111111111","timestamp":"2026-06-08T16:30:00.000Z","uuid":"a3","message":{"role":"assistant","content":[{"type":"text","text":"Both staging and production are affected by the change."}]}}
 { this line is intentionally corrupt and must be skipped

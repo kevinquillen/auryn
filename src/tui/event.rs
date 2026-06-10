@@ -211,8 +211,8 @@ mod tests {
 
     fn sample() -> TuiState {
         TuiState::new(vec![
-            session("Drupal Graph", ProviderKind::Claude),
-            session("MCP Auth", ProviderKind::Codex),
+            session("Alpha Notes", ProviderKind::Claude),
+            session("Service Setup", ProviderKind::Codex),
         ])
     }
 
@@ -220,11 +220,14 @@ mod tests {
     fn arrows_move_selection() {
         let mut state = sample();
         assert_eq!(handle_key(&mut state, key(KeyCode::Down)), Action::None);
-        assert_eq!(state.selected_session().unwrap().session_name, "MCP Auth");
+        assert_eq!(
+            state.selected_session().unwrap().session_name,
+            "Service Setup"
+        );
         handle_key(&mut state, key(KeyCode::Up));
         assert_eq!(
             state.selected_session().unwrap().session_name,
-            "Drupal Graph"
+            "Alpha Notes"
         );
     }
 
@@ -236,7 +239,7 @@ mod tests {
             Action::Quit
         );
         let action = handle_key(&mut state, key(KeyCode::Enter));
-        assert_eq!(action, Action::Resume("claude:Drupal Graph".to_string()));
+        assert_eq!(action, Action::Resume("claude:Alpha Notes".to_string()));
     }
 
     #[test]
@@ -244,14 +247,17 @@ mod tests {
         let mut state = sample();
         handle_key(&mut state, key(KeyCode::Char('/')));
         assert_eq!(state.mode(), Mode::Command);
-        for c in "mcp".chars() {
+        for c in "service".chars() {
             handle_key(&mut state, key(KeyCode::Char(c)));
         }
         let action = handle_key(&mut state, key(KeyCode::Enter));
         assert_eq!(action, Action::None);
         assert_eq!(state.mode(), Mode::Normal);
         assert_eq!(state.visible_count(), 1);
-        assert_eq!(state.selected_session().unwrap().session_name, "MCP Auth");
+        assert_eq!(
+            state.selected_session().unwrap().session_name,
+            "Service Setup"
+        );
     }
 
     #[test]

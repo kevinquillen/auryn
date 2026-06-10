@@ -332,10 +332,10 @@ mod tests {
 
     #[test]
     fn table_includes_headers_and_rows() {
-        let sessions = vec![session("Drupal Graph", ProviderKind::Claude, 87)];
+        let sessions = vec![session("Alpha Notes", ProviderKind::Claude, 87)];
         let table = render_table(&sessions);
         assert!(table.contains("Session Name"));
-        assert!(table.contains("Drupal Graph"));
+        assert!(table.contains("Alpha Notes"));
         assert!(table.contains("Claude"));
         assert!(table.contains("87"));
     }
@@ -351,10 +351,10 @@ mod tests {
 
     #[test]
     fn cli_parses_filter_query() {
-        let cli = Cli::try_parse_from(["auryn", "filter", "recursive cte"]).unwrap();
+        let cli = Cli::try_parse_from(["auryn", "filter", "open tasks"]).unwrap();
         match cli.command {
             Some(CommandKind::Filter { query, json }) => {
-                assert_eq!(query, "recursive cte");
+                assert_eq!(query, "open tasks");
                 assert!(!json);
             }
             other => panic!("unexpected: {other:?}"),

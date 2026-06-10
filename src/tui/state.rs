@@ -304,9 +304,9 @@ mod tests {
 
     fn sample() -> TuiState {
         TuiState::new(vec![
-            session("Drupal Graph", ProviderKind::Claude, &["recursive cte"]),
-            session("MCP Auth", ProviderKind::Codex, &["oauth tokens"]),
-            session("Blog Outline", ProviderKind::Gemini, &["local first"]),
+            session("Alpha Notes", ProviderKind::Claude, &["open tasks"]),
+            session("Service Setup", ProviderKind::Codex, &["config defaults"]),
+            session("Article Outline", ProviderKind::Gemini, &["five sections"]),
         ])
     }
 
@@ -316,7 +316,7 @@ mod tests {
         assert_eq!(state.selected_index(), 0);
         assert_eq!(
             state.selected_session().unwrap().session_name,
-            "Drupal Graph"
+            "Alpha Notes"
         );
         assert_eq!(state.visible_count(), 3);
     }
@@ -325,15 +325,21 @@ mod tests {
     fn selection_moves_and_clamps() {
         let mut state = sample();
         state.select_next();
-        assert_eq!(state.selected_session().unwrap().session_name, "MCP Auth");
+        assert_eq!(
+            state.selected_session().unwrap().session_name,
+            "Service Setup"
+        );
         state.select_next();
         state.select_next(); // already at last; should not overflow
         assert_eq!(
             state.selected_session().unwrap().session_name,
-            "Blog Outline"
+            "Article Outline"
         );
         state.select_previous();
-        assert_eq!(state.selected_session().unwrap().session_name, "MCP Auth");
+        assert_eq!(
+            state.selected_session().unwrap().session_name,
+            "Service Setup"
+        );
         state.select_first();
         assert_eq!(state.selected_index(), 0);
         state.select_last();
@@ -365,9 +371,12 @@ mod tests {
     #[test]
     fn text_filter_narrows_visible_sessions() {
         let mut state = sample();
-        state.set_text_filter("oauth");
+        state.set_text_filter("config");
         assert_eq!(state.visible_count(), 1);
-        assert_eq!(state.selected_session().unwrap().session_name, "MCP Auth");
+        assert_eq!(
+            state.selected_session().unwrap().session_name,
+            "Service Setup"
+        );
         state.clear_filters();
         assert_eq!(state.visible_count(), 3);
     }
@@ -379,7 +388,7 @@ mod tests {
         assert_eq!(state.visible_count(), 1);
         assert_eq!(
             state.selected_session().unwrap().session_name,
-            "Blog Outline"
+            "Article Outline"
         );
     }
 
@@ -400,13 +409,13 @@ mod tests {
     #[test]
     fn refresh_preserves_selection_by_id() {
         let mut state = sample();
-        state.select_next(); // MCP Auth
+        state.select_next(); // Service Setup
         let id = state.selected_session().unwrap().id.clone();
         // Rescan returns the same sessions in a different order.
         state.set_sessions(vec![
-            session("Blog Outline", ProviderKind::Gemini, &[]),
-            session("MCP Auth", ProviderKind::Codex, &[]),
-            session("Drupal Graph", ProviderKind::Claude, &[]),
+            session("Article Outline", ProviderKind::Gemini, &[]),
+            session("Service Setup", ProviderKind::Codex, &[]),
+            session("Alpha Notes", ProviderKind::Claude, &[]),
         ]);
         assert_eq!(state.selected_session().unwrap().id, id);
     }

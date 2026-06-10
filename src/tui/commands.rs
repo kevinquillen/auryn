@@ -110,16 +110,16 @@ mod tests {
     #[test]
     fn parses_filter_command() {
         assert_eq!(
-            parse("/filter recursive cte"),
-            ParsedCommand::Filter("recursive cte".to_string())
+            parse("/filter open tasks"),
+            ParsedCommand::Filter("open tasks".to_string())
         );
     }
 
     #[test]
     fn search_is_an_alias_for_filter() {
         assert_eq!(
-            parse("/search drupal"),
-            ParsedCommand::Filter("drupal".to_string())
+            parse("/search alpha"),
+            ParsedCommand::Filter("alpha".to_string())
         );
     }
 
@@ -162,14 +162,11 @@ mod tests {
 
     #[test]
     fn unknown_command_falls_back_to_filter() {
-        // `/drupal` is not a command, so it filters by "drupal".
+        // `/alpha` is not a command, so it filters by "alpha".
+        assert_eq!(parse("/alpha"), ParsedCommand::Filter("alpha".to_string()));
         assert_eq!(
-            parse("/drupal"),
-            ParsedCommand::Filter("drupal".to_string())
-        );
-        assert_eq!(
-            parse("/recursive cte"),
-            ParsedCommand::Filter("recursive cte".to_string())
+            parse("/open tasks"),
+            ParsedCommand::Filter("open tasks".to_string())
         );
     }
 
