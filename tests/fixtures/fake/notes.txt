@@ -1,0 +1,1 @@
+This non-JSON file must be ignored by the scanner.

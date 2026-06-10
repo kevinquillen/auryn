@@ -7,6 +7,7 @@
 //! separately from the binary so integration tests can drive it directly.
 
 pub mod app;
+pub mod cli;
 pub mod config;
 pub mod errors;
 pub mod format;
