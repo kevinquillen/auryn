@@ -117,7 +117,10 @@ mod tests {
 
     #[test]
     fn search_is_an_alias_for_filter() {
-        assert_eq!(parse("/search drupal"), ParsedCommand::Filter("drupal".to_string()));
+        assert_eq!(
+            parse("/search drupal"),
+            ParsedCommand::Filter("drupal".to_string())
+        );
     }
 
     #[test]
@@ -160,7 +163,10 @@ mod tests {
     #[test]
     fn unknown_command_falls_back_to_filter() {
         // `/drupal` is not a command, so it filters by "drupal".
-        assert_eq!(parse("/drupal"), ParsedCommand::Filter("drupal".to_string()));
+        assert_eq!(
+            parse("/drupal"),
+            ParsedCommand::Filter("drupal".to_string())
+        );
         assert_eq!(
             parse("/recursive cte"),
             ParsedCommand::Filter("recursive cte".to_string())

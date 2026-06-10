@@ -222,13 +222,19 @@ mod tests {
         assert_eq!(handle_key(&mut state, key(KeyCode::Down)), Action::None);
         assert_eq!(state.selected_session().unwrap().session_name, "MCP Auth");
         handle_key(&mut state, key(KeyCode::Up));
-        assert_eq!(state.selected_session().unwrap().session_name, "Drupal Graph");
+        assert_eq!(
+            state.selected_session().unwrap().session_name,
+            "Drupal Graph"
+        );
     }
 
     #[test]
     fn q_quits_and_enter_resumes() {
         let mut state = sample();
-        assert_eq!(handle_key(&mut state, key(KeyCode::Char('q'))), Action::Quit);
+        assert_eq!(
+            handle_key(&mut state, key(KeyCode::Char('q'))),
+            Action::Quit
+        );
         let action = handle_key(&mut state, key(KeyCode::Enter));
         assert_eq!(action, Action::Resume("claude:Drupal Graph".to_string()));
     }
@@ -261,7 +267,10 @@ mod tests {
     #[test]
     fn refresh_key_requests_refresh() {
         let mut state = sample();
-        assert_eq!(handle_key(&mut state, key(KeyCode::Char('r'))), Action::Refresh);
+        assert_eq!(
+            handle_key(&mut state, key(KeyCode::Char('r'))),
+            Action::Refresh
+        );
     }
 
     #[test]
@@ -284,7 +293,10 @@ mod tests {
         }
         handle_key(&mut state, key(KeyCode::Enter));
         assert_eq!(state.visible_count(), 1);
-        assert_eq!(state.selected_session().unwrap().provider, ProviderKind::Codex);
+        assert_eq!(
+            state.selected_session().unwrap().provider,
+            ProviderKind::Codex
+        );
     }
 
     #[test]

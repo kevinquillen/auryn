@@ -64,8 +64,14 @@ pub fn render(frame: &mut Frame, state: &TuiState) {
 
 fn render_table(frame: &mut Frame, area: Rect, state: &TuiState) {
     let now = Utc::now();
-    let header = Row::new(["Tool", "Date Began", "Date Last Used", "Messages", "Session Name"])
-        .style(Style::default().add_modifier(Modifier::BOLD));
+    let header = Row::new([
+        "Tool",
+        "Date Began",
+        "Date Last Used",
+        "Messages",
+        "Session Name",
+    ])
+    .style(Style::default().add_modifier(Modifier::BOLD));
 
     let dim = Style::default().add_modifier(Modifier::DIM);
     let rows = state.visible_sessions().map(|s| {
@@ -225,7 +231,10 @@ fn render_help(frame: &mut Frame) {
             format!("/{} {}", spec.name, spec.args)
         };
         lines.push(Line::from(vec![
-            Span::styled(format!("{usage:<22}"), Style::default().add_modifier(Modifier::BOLD)),
+            Span::styled(
+                format!("{usage:<22}"),
+                Style::default().add_modifier(Modifier::BOLD),
+            ),
             Span::raw(spec.description),
         ]));
     }

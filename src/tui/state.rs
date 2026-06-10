@@ -314,7 +314,10 @@ mod tests {
     fn starts_on_first_session() {
         let state = sample();
         assert_eq!(state.selected_index(), 0);
-        assert_eq!(state.selected_session().unwrap().session_name, "Drupal Graph");
+        assert_eq!(
+            state.selected_session().unwrap().session_name,
+            "Drupal Graph"
+        );
         assert_eq!(state.visible_count(), 3);
     }
 
@@ -325,7 +328,10 @@ mod tests {
         assert_eq!(state.selected_session().unwrap().session_name, "MCP Auth");
         state.select_next();
         state.select_next(); // already at last; should not overflow
-        assert_eq!(state.selected_session().unwrap().session_name, "Blog Outline");
+        assert_eq!(
+            state.selected_session().unwrap().session_name,
+            "Blog Outline"
+        );
         state.select_previous();
         assert_eq!(state.selected_session().unwrap().session_name, "MCP Auth");
         state.select_first();
@@ -371,7 +377,10 @@ mod tests {
         let mut state = sample();
         state.set_provider_filter(Some(ProviderKind::Gemini));
         assert_eq!(state.visible_count(), 1);
-        assert_eq!(state.selected_session().unwrap().session_name, "Blog Outline");
+        assert_eq!(
+            state.selected_session().unwrap().session_name,
+            "Blog Outline"
+        );
     }
 
     #[test]
