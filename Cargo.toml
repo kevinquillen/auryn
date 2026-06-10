@@ -1,0 +1,10 @@
+[package]
+name = "auryn"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+authors = ["Kevin Quillen <kevin@kevinquillen.com>"]
+repository = "https://github.com/kevinquillen/auryn"
+description = "Browse, search, preview, and resume AI coding sessions from a single terminal interface."
+
+[dependencies]
