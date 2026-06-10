@@ -19,16 +19,15 @@ fn claude_fixtures_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/claude")
 }
 
-/// Builds a command with an isolated config dir and a Claude root that finds
-/// nothing. `fake` controls whether the fake provider is enabled and pointed at
-/// the fixtures.
+fn codex_fixtures_dir() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/codex")
+}
+
+/// Builds a command with an isolated config dir. `fake` controls whether the
+/// fake provider is enabled and pointed at the fixtures. Real providers are
+/// isolated to non-existent roots by `base_command`.
 fn auryn(args: &[&str], fake: bool) -> std::process::Output {
     let mut cmd = base_command(args);
-    // Point Claude at a non-existent root so it contributes no sessions.
-    cmd.env(
-        "AURYN_CLAUDE_DIR",
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/test-no-claude"),
-    );
     if fake {
         cmd.env("AURYN_FAKE", "1");
         cmd.env("AURYN_FAKE_DIR", fixtures_dir());
@@ -44,18 +43,30 @@ fn auryn(args: &[&str], fake: bool) -> std::process::Output {
 fn auryn_claude(args: &[&str]) -> std::process::Output {
     let mut cmd = base_command(args);
     cmd.env("AURYN_CLAUDE_DIR", claude_fixtures_dir());
-    cmd.env_remove("AURYN_FAKE");
-    cmd.env_remove("AURYN_FAKE_DIR");
     cmd.output().expect("failed to run auryn binary")
 }
 
+/// Runs the binary with the Codex provider pointed at the Codex fixtures and
+/// the fake provider disabled.
+fn auryn_codex(args: &[&str]) -> std::process::Output {
+    let mut cmd = base_command(args);
+    cmd.env("AURYN_CODEX_DIR", codex_fixtures_dir());
+    cmd.output().expect("failed to run auryn binary")
+}
+
+/// Builds a base command that isolates config and points every real provider at
+/// a non-existent root, so no test ever reads the developer's real session
+/// storage. Individual helpers override a single provider's root as needed.
 fn base_command(args: &[&str]) -> Command {
-    let isolated_config = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("target")
-        .join("test-config-home");
+    let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let mut cmd = Command::new(BIN);
     cmd.args(args);
-    cmd.env("XDG_CONFIG_HOME", &isolated_config);
+    cmd.env("XDG_CONFIG_HOME", manifest.join("target/test-config-home"));
+    cmd.env("AURYN_CLAUDE_DIR", manifest.join("target/test-no-claude"));
+    cmd.env("AURYN_CODEX_DIR", manifest.join("target/test-no-codex"));
+    // Default to the fake provider being off; `auryn` turns it on explicitly.
+    cmd.env_remove("AURYN_FAKE");
+    cmd.env_remove("AURYN_FAKE_DIR");
     cmd
 }
 
@@ -100,6 +111,15 @@ fn filter_matches_claude_conversation_content() {
     // session (whose name contains "outline") is excluded.
     assert!(text.contains("Open Tasks Review"));
     assert!(!text.contains("outline"));
+}
+
+#[test]
+fn list_renders_codex_fixture_sessions() {
+    let out = auryn_codex(&["list"]);
+    assert!(out.status.success());
+    let text = stdout(&out);
+    assert!(text.contains("Codex"));
+    assert!(text.contains("How should the service handle configuration?"));
 }
 
 #[test]
