@@ -95,10 +95,18 @@ pub fn run() -> Result<i32> {
     }
 }
 
-/// Placeholder for the interactive interface delivered in Phase 2.
+/// Launches the interactive TUI. On exit it either resumes the chosen session
+/// (printed for now; real terminal hand-off lands in Phase 4) or returns.
 fn run_tui() -> Result<i32> {
-    println!("The interactive TUI arrives in Phase 2. For now, try `auryn list`.");
-    Ok(0)
+    let app = App::load()?;
+    match crate::tui::run(&app)? {
+        Some(session_id) => {
+            let command = app.resume_command(&session_id)?;
+            println!("Would resume by running: {}", render_command(&command));
+            Ok(0)
+        }
+        None => Ok(0),
+    }
 }
 
 fn cmd_list(json: bool) -> Result<i32> {
