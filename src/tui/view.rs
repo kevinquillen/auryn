@@ -10,14 +10,35 @@
 use chrono::Utc;
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
-use ratatui::style::{Modifier, Style};
+use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span, Text};
 use ratatui::widgets::{Block, Borders, Cell, Clear, Paragraph, Row, Table, TableState, Wrap};
 
 use super::commands::REGISTRY;
 use super::state::{Mode, TuiState};
 use crate::format;
-use crate::models::Session;
+use crate::models::{ProviderKind, Role, Session};
+
+/// Named-ANSI accent for each provider. Named colors (not RGB) are remapped by
+/// the terminal emulator to the user's configured palette, so accents stay
+/// harmonious with whatever theme the terminal uses.
+fn provider_color(provider: ProviderKind) -> Color {
+    match provider {
+        ProviderKind::Claude => Color::Magenta,
+        ProviderKind::Codex => Color::Green,
+        ProviderKind::Gemini => Color::Blue,
+        ProviderKind::Fake => Color::Yellow,
+    }
+}
+
+/// Named-ANSI accent for each conversational role in the preview.
+fn role_color(role: Role) -> Color {
+    match role {
+        Role::User => Color::Green,
+        Role::Assistant => Color::Cyan,
+        Role::System => Color::Yellow,
+    }
+}
 
 /// Draws the complete interface for the current state.
 pub fn render(frame: &mut Frame, state: &TuiState) {
@@ -49,7 +70,8 @@ fn render_table(frame: &mut Frame, area: Rect, state: &TuiState) {
     let dim = Style::default().add_modifier(Modifier::DIM);
     let rows = state.visible_sessions().map(|s| {
         Row::new(vec![
-            Cell::from(s.provider.display_name()),
+            Cell::from(s.provider.display_name())
+                .style(Style::default().fg(provider_color(s.provider))),
             Cell::from(format::absolute_date_opt(s.date_began)).style(dim),
             Cell::from(format::relative_time_opt(s.date_last_used, now)).style(dim),
             Cell::from(s.message_count.to_string()).style(dim),
@@ -142,7 +164,9 @@ fn preview_text(session: &Session, show_details: bool) -> Text<'static> {
         }
         lines.push(Line::from(Span::styled(
             message.role.label().to_string(),
-            Style::default().add_modifier(Modifier::BOLD),
+            Style::default()
+                .fg(role_color(message.role))
+                .add_modifier(Modifier::BOLD),
         )));
         for content_line in message.content.lines() {
             lines.push(Line::from(format!("  {content_line}")));
