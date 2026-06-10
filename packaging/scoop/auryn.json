@@ -1,0 +1,21 @@
+{
+  "version": "0.1.0",
+  "description": "Browse, search, preview, and resume AI coding sessions from the terminal.",
+  "homepage": "https://github.com/kevinquillen/auryn",
+  "license": "MIT",
+  "architecture": {
+    "64bit": {
+      "url": "https://github.com/kevinquillen/auryn/releases/download/v0.1.0/auryn-v0.1.0-x86_64-pc-windows-msvc.zip",
+      "hash": "REPLACE_WITH_X86_64_WINDOWS_SHA256"
+    }
+  },
+  "bin": "auryn.exe",
+  "checkver": "github",
+  "autoupdate": {
+    "architecture": {
+      "64bit": {
+        "url": "https://github.com/kevinquillen/auryn/releases/download/v$version/auryn-v$version-x86_64-pc-windows-msvc.zip"
+      }
+    }
+  }
+}
