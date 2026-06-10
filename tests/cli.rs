@@ -48,10 +48,12 @@ fn list_renders_fixture_sessions() {
 }
 
 #[test]
-fn list_without_providers_reports_no_sessions() {
+fn list_falls_back_to_sample_data_when_no_real_providers() {
     let out = auryn(&["list"], false);
     assert!(out.status.success());
-    assert!(stdout(&out).contains("No sessions found."));
+    // No real providers exist yet, so the synthetic provider populates the
+    // list with built-in sample sessions rather than showing nothing.
+    assert!(stdout(&out).contains("Drupal Graph"));
 }
 
 #[test]
