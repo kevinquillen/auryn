@@ -5,5 +5,6 @@
 //! in-memory index on top of these primitives without changing callers.
 
 pub mod filter;
+pub mod score;
 
 pub use filter::Filter;

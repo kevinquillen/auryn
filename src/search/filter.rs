@@ -1,13 +1,17 @@
-//! Composable session filtering.
+//! Composable session filtering and ranking.
 //!
 //! A [`Filter`] combines an optional free-text query with an optional provider
 //! restriction. Text matching is case-insensitive and term-wise conjunctive:
-//! every whitespace-separated term must appear somewhere in the session's
-//! searchable text (name, project path, provider, and preview content). This
-//! satisfies the spec's metadata-plus-content search; fuzzy and regex matching
-//! are layered on in Phase 6.
+//! each term must match either the session metadata (name, provider, project
+//! path) *fuzzily* or the conversation content as a *substring* (see
+//! [`crate::search::score`]). Matches are ranked best-first by summed score, so
+//! title hits surface above content-only hits. With no text query, results keep
+//! their incoming order (recency).
+
+use fuzzy_matcher::skim::SkimMatcherV2;
 
 use crate::models::{ProviderKind, Session};
+use crate::search::score;
 
 /// A reusable, composable session filter.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -48,49 +52,75 @@ impl Filter {
 
     /// Tests a single session against this filter.
     pub fn matches(&self, session: &Session) -> bool {
+        self.score(session, &score::matcher()).is_some()
+    }
+
+    /// Scores a session against this filter, or `None` if it does not match.
+    /// The provider restriction is a hard gate; the text query contributes the
+    /// fuzzy score used for ranking.
+    fn score(&self, session: &Session, matcher: &SkimMatcherV2) -> Option<i64> {
         if let Some(provider) = self.provider
             && session.provider != provider
         {
-            return false;
+            return None;
         }
         match &self.text {
-            None => true,
-            Some(query) => text_matches(session, query),
+            None => Some(0),
+            Some(query) => score::score(
+                &metadata_text(session),
+                &content_text(session),
+                query,
+                matcher,
+            ),
         }
     }
 
-    /// Returns only the sessions that satisfy this filter, preserving order.
+    /// Returns the indices of matching sessions, ranked best-match-first. Ties
+    /// (including the no-text case, where every score is equal) preserve the
+    /// input order via a stable sort.
+    pub fn rank_indices(&self, sessions: &[Session]) -> Vec<usize> {
+        let matcher = score::matcher();
+        let mut scored: Vec<(usize, i64)> = sessions
+            .iter()
+            .enumerate()
+            .filter_map(|(i, s)| self.score(s, &matcher).map(|sc| (i, sc)))
+            .collect();
+        scored.sort_by(|a, b| b.1.cmp(&a.1));
+        scored.into_iter().map(|(i, _)| i).collect()
+    }
+
+    /// Returns the matching sessions, ranked best-match-first.
     pub fn apply(&self, sessions: Vec<Session>) -> Vec<Session> {
-        if self.is_empty() {
-            return sessions;
-        }
-        sessions.into_iter().filter(|s| self.matches(s)).collect()
+        let order = self.rank_indices(&sessions);
+        let mut slots: Vec<Option<Session>> = sessions.into_iter().map(Some).collect();
+        order
+            .into_iter()
+            .map(|i| slots[i].take().expect("each index taken once"))
+            .collect()
     }
 }
 
-/// True when every term in `query` appears in the session's searchable text.
-fn text_matches(session: &Session, query: &str) -> bool {
-    let terms: Vec<String> = query.split_whitespace().map(|t| t.to_lowercase()).collect();
-    if terms.is_empty() {
-        return true;
-    }
-    let haystack = searchable_text(session);
-    terms.iter().all(|term| haystack.contains(term))
-}
-
-/// Builds the lowercased text blob a query is matched against.
-fn searchable_text(session: &Session) -> String {
-    let mut parts: Vec<String> = Vec::new();
-    parts.push(session.session_name.to_lowercase());
-    parts.push(session.provider.display_name().to_lowercase());
-    parts.push(session.provider.as_str().to_string());
+/// Builds the metadata blob (name, provider, project path) matched fuzzily.
+fn metadata_text(session: &Session) -> String {
+    let mut parts: Vec<String> = vec![
+        session.session_name.clone(),
+        session.provider.display_name().to_string(),
+        session.provider.as_str().to_string(),
+    ];
     if let Some(path) = &session.project_path {
-        parts.push(path.to_string_lossy().to_lowercase());
-    }
-    for message in &session.preview_messages {
-        parts.push(message.content.to_lowercase());
+        parts.push(path.to_string_lossy().into_owned());
     }
     parts.join("\n")
+}
+
+/// Builds the lowercased conversation-content blob matched as a substring.
+fn content_text(session: &Session) -> String {
+    session
+        .preview_messages
+        .iter()
+        .map(|m| m.content.to_lowercase())
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 #[cfg(test)]
@@ -185,7 +215,7 @@ mod tests {
     }
 
     #[test]
-    fn apply_preserves_order_of_matches() {
+    fn apply_filters_to_matching_sessions() {
         let sessions = vec![
             session("Alpha", ProviderKind::Claude, None, &[]),
             session("Other", ProviderKind::Claude, None, &[]),
@@ -193,7 +223,46 @@ mod tests {
         ];
         let result = Filter::none().with_text("alpha").apply(sessions);
         assert_eq!(result.len(), 2);
-        assert_eq!(result[0].session_name, "Alpha");
-        assert_eq!(result[1].session_name, "Alpha Two");
+        let names: Vec<_> = result.iter().map(|s| s.session_name.as_str()).collect();
+        assert!(names.contains(&"Alpha"));
+        assert!(names.contains(&"Alpha Two"));
+        assert!(!names.contains(&"Other"));
+    }
+
+    #[test]
+    fn no_text_filter_preserves_input_order() {
+        let sessions = vec![
+            session("First", ProviderKind::Claude, None, &[]),
+            session("Second", ProviderKind::Claude, None, &[]),
+            session("Third", ProviderKind::Claude, None, &[]),
+        ];
+        let result = Filter::none().apply(sessions);
+        let names: Vec<_> = result.iter().map(|s| s.session_name.as_str()).collect();
+        assert_eq!(names, ["First", "Second", "Third"]);
+    }
+
+    #[test]
+    fn ranks_better_matches_first_regardless_of_input_order() {
+        // The stronger (exact, contiguous) match should rank ahead of the
+        // weaker (scattered subsequence) one, even though it is listed last.
+        let sessions = vec![
+            session(
+                "rich electric cursive notes",
+                ProviderKind::Claude,
+                None,
+                &[],
+            ),
+            session("recursive plan", ProviderKind::Claude, None, &[]),
+        ];
+        let result = Filter::none().with_text("recursive").apply(sessions);
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0].session_name, "recursive plan");
+    }
+
+    #[test]
+    fn fuzzy_subsequence_matches() {
+        let s = session("Drupal Graph", ProviderKind::Claude, None, &[]);
+        // "drpl" is a subsequence of "drupal".
+        assert!(Filter::none().with_text("drpl").matches(&s));
     }
 }
