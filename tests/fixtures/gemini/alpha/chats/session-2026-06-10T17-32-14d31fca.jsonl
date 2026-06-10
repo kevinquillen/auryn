@@ -1,0 +1,9 @@
+{"kind":"main","sessionId":"14d31fca-6eca-42ed-a940-46242cbff357","projectHash":"abc123","startTime":"2026-06-10T17:32:00.000Z","lastUpdated":"2026-06-10T17:35:00.000Z"}
+{"type":"user","id":"m0","timestamp":"2026-06-10T17:32:01.000Z","content":[{"text":"<session_context> This is the Gemini CLI. We are setting up the context for our chat."}]}
+{"type":"user","id":"m1","timestamp":"2026-06-10T17:32:05.000Z","content":[{"text":"How do I run the tests?"}]}
+{"type":"gemini","id":"m2","timestamp":"2026-06-10T17:32:08.000Z","content":"Use cargo"}
+{"type":"gemini","id":"m2","timestamp":"2026-06-10T17:32:09.000Z","content":"Use cargo test to run all tests."}
+{"type":"user","id":"m3","timestamp":"2026-06-10T17:32:10.000Z","content":[{"functionResponse":{"name":"read_file"}}]}
+{"type":"user","id":"m4","timestamp":"2026-06-10T17:34:00.000Z","content":[{"text":"Which environments are affected?"}]}
+{"type":"gemini","id":"m5","timestamp":"2026-06-10T17:35:00.000Z","content":"Both staging and production are affected."}
+{ this line is intentionally corrupt and must be skipped

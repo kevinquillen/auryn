@@ -1,0 +1,3 @@
+{"kind":"main","sessionId":"62dda76c-80df-4920-928d-3022f92c65fd","projectHash":"def456","startTime":"2026-06-04T09:00:00.000Z","lastUpdated":"2026-06-04T09:01:00.000Z"}
+{"type":"user","id":"s1","timestamp":"2026-06-04T09:00:05.000Z","content":[{"text":"How should the service handle configuration?"}]}
+{"type":"gemini","id":"s2","timestamp":"2026-06-04T09:00:10.000Z","content":"Store configuration in a single file with sensible defaults."}
