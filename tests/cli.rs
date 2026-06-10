@@ -1,9 +1,10 @@
 //! End-to-end tests that invoke the compiled `auryn` binary.
 //!
-//! Each invocation points the fake provider at the JSON fixtures and isolates
-//! the config directory via `XDG_CONFIG_HOME`, so output never depends on the
-//! developer's real environment. Assertions target stable substrings and
-//! parsed JSON rather than relative-time strings, which vary with the clock.
+//! Each invocation isolates the config directory via `XDG_CONFIG_HOME` and
+//! points the Claude provider at a non-existent root via `AURYN_CLAUDE_DIR`, so
+//! output never depends on the developer's real `~/.claude` or environment.
+//! Assertions target stable substrings and parsed JSON rather than
+//! relative-time strings, which vary with the clock.
 
 use std::path::PathBuf;
 use std::process::Command;
@@ -14,15 +15,20 @@ fn fixtures_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/fake")
 }
 
-/// Builds a command with an isolated config dir. `fake` controls whether the
-/// fake provider is enabled and pointed at the fixtures.
+fn claude_fixtures_dir() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/claude")
+}
+
+/// Builds a command with an isolated config dir and a Claude root that finds
+/// nothing. `fake` controls whether the fake provider is enabled and pointed at
+/// the fixtures.
 fn auryn(args: &[&str], fake: bool) -> std::process::Output {
-    let isolated_config = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("target")
-        .join("test-config-home");
-    let mut cmd = Command::new(BIN);
-    cmd.args(args);
-    cmd.env("XDG_CONFIG_HOME", &isolated_config);
+    let mut cmd = base_command(args);
+    // Point Claude at a non-existent root so it contributes no sessions.
+    cmd.env(
+        "AURYN_CLAUDE_DIR",
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/test-no-claude"),
+    );
     if fake {
         cmd.env("AURYN_FAKE", "1");
         cmd.env("AURYN_FAKE_DIR", fixtures_dir());
@@ -31,6 +37,26 @@ fn auryn(args: &[&str], fake: bool) -> std::process::Output {
         cmd.env_remove("AURYN_FAKE_DIR");
     }
     cmd.output().expect("failed to run auryn binary")
+}
+
+/// Runs the binary with the Claude provider pointed at the Claude fixtures and
+/// the fake provider disabled.
+fn auryn_claude(args: &[&str]) -> std::process::Output {
+    let mut cmd = base_command(args);
+    cmd.env("AURYN_CLAUDE_DIR", claude_fixtures_dir());
+    cmd.env_remove("AURYN_FAKE");
+    cmd.env_remove("AURYN_FAKE_DIR");
+    cmd.output().expect("failed to run auryn binary")
+}
+
+fn base_command(args: &[&str]) -> Command {
+    let isolated_config = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("target")
+        .join("test-config-home");
+    let mut cmd = Command::new(BIN);
+    cmd.args(args);
+    cmd.env("XDG_CONFIG_HOME", &isolated_config);
+    cmd
 }
 
 fn stdout(output: &std::process::Output) -> String {
@@ -48,12 +74,31 @@ fn list_renders_fixture_sessions() {
 }
 
 #[test]
-fn list_falls_back_to_sample_data_when_no_real_providers() {
+fn list_reports_no_sessions_when_nothing_discovered() {
+    // Claude is registered but its root finds nothing, and the fake provider is
+    // disabled, so no sessions are discovered.
     let out = auryn(&["list"], false);
     assert!(out.status.success());
-    // No real providers exist yet, so the synthetic provider populates the
-    // list with built-in sample sessions rather than showing nothing.
-    assert!(stdout(&out).contains("Drupal Graph"));
+    assert!(stdout(&out).contains("No sessions found."));
+}
+
+#[test]
+fn list_renders_claude_fixture_sessions() {
+    let out = auryn_claude(&["list"]);
+    assert!(out.status.success());
+    let text = stdout(&out);
+    assert!(text.contains("Recursive CTE Support"));
+    assert!(text.contains("Claude"));
+}
+
+#[test]
+fn filter_matches_claude_conversation_content() {
+    let out = auryn_claude(&["filter", "postgresql"]);
+    assert!(out.status.success());
+    let text = stdout(&out);
+    // The term appears only in the widget session's conversation.
+    assert!(text.contains("Recursive CTE Support"));
+    assert!(!text.contains("local-first"));
 }
 
 #[test]
