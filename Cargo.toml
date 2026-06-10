@@ -2,10 +2,15 @@
 name = "auryn"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.88"
 license = "MIT"
 authors = ["Kevin Quillen <kevin@kevinquillen.com>"]
 repository = "https://github.com/kevinquillen/auryn"
+homepage = "https://github.com/kevinquillen/auryn"
 description = "Browse, search, preview, and resume AI coding sessions from a single terminal interface."
+readme = "README.md"
+keywords = ["tui", "ai", "cli", "sessions", "claude"]
+categories = ["command-line-utilities"]
 
 [dependencies]
 anyhow = "1.0.102"
@@ -18,3 +23,27 @@ serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.150"
 thiserror = "2.0.18"
 toml = "1.1.2"
+
+# Release-build profile used by cargo-dist (see docs/release.md). Inherits the
+# standard release profile and enables thin LTO for smaller, faster binaries.
+[profile.dist]
+inherits = "release"
+lto = "thin"
+
+# Single-crate workspace so cargo-dist can read its configuration below.
+[workspace]
+
+# cargo-dist configuration (https://opensource.axo.dev/cargo-dist/). The release
+# workflow at .github/workflows/release.yml builds these targets; run
+# `dist init` to regenerate that workflow from this config. See docs/release.md.
+[workspace.metadata.dist]
+cargo-dist-version = "0.30.0"
+ci = ["github"]
+installers = ["shell", "powershell", "homebrew"]
+targets = [
+    "aarch64-apple-darwin",
+    "x86_64-apple-darwin",
+    "x86_64-unknown-linux-gnu",
+    "aarch64-unknown-linux-gnu",
+    "x86_64-pc-windows-msvc",
+]
