@@ -71,14 +71,9 @@ impl TuiState {
     }
 
     /// Recomputes the visible set from the current filter and clamps selection.
+    /// Visible sessions are ranked best-match-first when a text query is active.
     fn recompute_visible(&mut self) {
-        self.visible = self
-            .sessions
-            .iter()
-            .enumerate()
-            .filter(|(_, s)| self.filter.matches(s))
-            .map(|(i, _)| i)
-            .collect();
+        self.visible = self.filter.rank_indices(&self.sessions);
         if self.selected >= self.visible.len() {
             self.selected = self.visible.len().saturating_sub(1);
         }
