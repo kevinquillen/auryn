@@ -41,16 +41,24 @@ pub trait Provider {
 
 /// Builds the set of active providers for the given configuration.
 ///
-/// In Phase 1 only the synthetic [`fake::FakeProvider`] exists, gated behind
-/// the `AURYN_FAKE` environment variable so it never appears during normal
-/// use. Real providers (Claude, Codex, Gemini) are registered here in later
-/// phases; callers iterate the returned slice without knowing the membership.
-pub fn build_registry(_config: &AppConfig) -> Vec<Box<dyn Provider>> {
+/// Real providers (Claude, Codex, Gemini) are registered in
+/// [`register_real_providers`] in later phases; callers iterate the returned
+/// slice without knowing the membership. The synthetic [`fake::FakeProvider`]
+/// is registered when explicitly enabled via `AURYN_FAKE`, or as a fallback
+/// when no real provider is available yet, so the interface stays populated
+/// during development. Once a real provider is registered, the fake one no
+/// longer auto-appears.
+pub fn build_registry(config: &AppConfig) -> Vec<Box<dyn Provider>> {
     let mut providers: Vec<Box<dyn Provider>> = Vec::new();
+    register_real_providers(config, &mut providers);
 
-    if fake::fake_enabled() {
+    if providers.is_empty() || fake::fake_enabled() {
         providers.push(Box::new(fake::FakeProvider::from_env()));
     }
 
     providers
 }
+
+/// Registers the real, on-disk providers enabled in `config`. Empty until the
+/// Claude (Phase 3), Codex, and Gemini (Phase 5) scanners land.
+fn register_real_providers(_config: &AppConfig, _providers: &mut Vec<Box<dyn Provider>>) {}
