@@ -6,8 +6,11 @@
 //! later phases) contains provider-specific logic. The library is exposed
 //! separately from the binary so integration tests can drive it directly.
 
+pub mod app;
 pub mod config;
 pub mod errors;
 pub mod format;
 pub mod models;
 pub mod paths;
+pub mod providers;
+pub mod search;
