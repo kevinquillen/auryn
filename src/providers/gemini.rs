@@ -264,7 +264,7 @@ fn parse_session(path: &Path, project_root: Option<&Path>, config: &AppConfig) -
         .filter(|m| !m.text.trim().is_empty())
         .filter(|m| !(m.role == Role::User && is_injected_context(&m.text)))
         .collect();
-    messages.sort_by(|a, b| a.timestamp.cmp(&b.timestamp));
+    messages.sort_by_key(|m| m.timestamp);
 
     if messages.is_empty() {
         return None;
