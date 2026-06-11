@@ -57,6 +57,7 @@ pub struct ProvidersConfig {
     pub claude: ProviderSettings,
     pub codex: ProviderSettings,
     pub gemini: ProviderSettings,
+    pub copilot: ProviderSettings,
 }
 
 impl ProvidersConfig {
@@ -67,6 +68,7 @@ impl ProvidersConfig {
             ProviderKind::Claude => Some(&self.claude),
             ProviderKind::Codex => Some(&self.codex),
             ProviderKind::Gemini => Some(&self.gemini),
+            ProviderKind::Copilot => Some(&self.copilot),
             ProviderKind::Fake => None,
         }
     }

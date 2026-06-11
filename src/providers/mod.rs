@@ -9,6 +9,7 @@
 
 pub mod claude;
 pub mod codex;
+pub mod copilot;
 pub mod fake;
 pub mod gemini;
 pub(crate) mod util;
@@ -79,6 +80,11 @@ fn register_real_providers(config: &AppConfig, providers: &mut Vec<Box<dyn Provi
     if config.providers.gemini.enabled {
         providers.push(Box::new(gemini::GeminiProvider::from_settings(
             &config.providers.gemini,
+        )));
+    }
+    if config.providers.copilot.enabled {
+        providers.push(Box::new(copilot::CopilotProvider::from_settings(
+            &config.providers.copilot,
         )));
     }
 }
