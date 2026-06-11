@@ -5,7 +5,7 @@ Changelog, and this project adheres to Semantic Versioning.
 
 ## [Unreleased]
 
-### Added
+## [v0.1.1]
 
 * GitHub Copilot CLI provider.
 
