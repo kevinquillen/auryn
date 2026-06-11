@@ -29,13 +29,12 @@ releases.
 
 ## Decision Outcome
 
-Chosen option: "GitHub Releases plus Homebrew." Prebuilt archives for the five
-targets are attached to a GitHub Release, with SHA-256 checksums. GitHub Releases
-is the primary channel; Homebrew is the secondary channel for macOS and Linux.
-On Windows, users download the release archive directly; a one-line install via
-the cargo-dist PowerShell installer is available when the cargo-dist flow is
-used. `cargo install` remains supported for Rust developers but is not the
-primary path.
+Chosen option: "GitHub Releases plus Homebrew plus crates.io." Prebuilt archives
+for the five targets are attached to a GitHub Release, with SHA-256 checksums.
+GitHub Releases is the primary channel; Homebrew is the secondary channel for
+macOS and Linux. On Windows, users download the release archive directly. The
+crate is also published to crates.io, so `cargo install auryn` works for Rust
+developers, though prebuilt binaries remain the primary path for non-Rust users.
 
 Scoop was considered and deferred. It would require a separately maintained
 bucket repository, and cargo-dist does not publish Scoop manifests, so it adds
@@ -45,11 +44,13 @@ be added later on demand without changing this decision's foundation.
 
 The release mechanism is a hand-maintained `.github/workflows/release.yml`: a
 tag-triggered, matrixed cross-build that verifies the tag matches the
-`Cargo.toml` version, publishes archives and checksums to a GitHub Release, and
-publishes the Homebrew formula to the tap. Versions are bumped with cargo-release
-(`cargo release ...` updates `Cargo.toml`, commits, tags, and pushes), so the
-tag and the crate version cannot drift. This keeps releases working with no extra
-tooling and a single source of truth.
+`Cargo.toml` version, publishes archives and checksums to a GitHub Release,
+publishes the Homebrew formula to the tap, and publishes the crate to crates.io
+so `cargo install auryn` works. The version is bumped through a pull request,
+since `main` is protected against direct commits; only the tag is pushed
+directly (branch protection does not restrict tags). The `verify` job guards
+against the tag and the crate version drifting. This keeps releases working with
+no extra tooling and a single source of truth.
 
 cargo-dist remains a viable alternative that can generate an equivalent workflow
 and Homebrew formula from `Cargo.toml` metadata. It is not configured in the
