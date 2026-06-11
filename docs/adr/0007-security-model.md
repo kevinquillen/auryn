@@ -33,10 +33,14 @@ provider-owned paths. Parsing is defensive: file sizes are bounded
 single corrupt file never aborts discovery. Resume builds a
 `std::process::Command` argument-by-argument (e.g. `Command::new("claude")
 .arg("--resume")`) and never invokes `sh -c` or `cmd /c`, so content from a
-session file can never be interpreted as a command. No credentials, API keys,
-routing, proxying, telemetry, or background daemons are involved. The fake
-provider is gated behind `AURYN_FAKE` so synthetic data never appears in normal
-use.
+session file can never be interpreted as a command. The working directory read
+from a session file is canonicalized and required to be an existing directory
+before it is used as the resume command's cwd; otherwise the provider CLI
+launches in the inherited directory, so a hostile file cannot redirect where it
+runs. Configuration bounds (`preview_turns`, `max_file_bytes`) are clamped to
+hard ceilings on load. No credentials, API keys, routing, proxying, telemetry, or
+background daemons are involved. The fake provider is gated behind `AURYN_FAKE` so
+synthetic data never appears in normal use.
 
 ### Consequences
 

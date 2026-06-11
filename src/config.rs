@@ -19,6 +19,14 @@ const DEFAULT_PREVIEW_TURNS: usize = 6;
 /// against pathological or malicious files. 16 MiB.
 const DEFAULT_MAX_FILE_BYTES: u64 = 16 * 1024 * 1024;
 
+/// Hard ceiling on `preview_turns`, so a hostile or mistaken config cannot make
+/// scanning retain an unreasonable amount of text per session.
+const MAX_PREVIEW_TURNS: usize = 100;
+
+/// Hard ceiling on `max_file_bytes` (256 MiB), so a config value cannot drive
+/// excessive memory use while scanning.
+const MAX_FILE_BYTES_CAP: u64 = 256 * 1024 * 1024;
+
 /// Top-level configuration document.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
@@ -98,8 +106,14 @@ impl AppConfig {
             return Ok(AppConfig::default());
         }
         let raw = std::fs::read_to_string(&path)?;
-        let config: AppConfig = toml::from_str(&raw)?;
-        Ok(config)
+        AppConfig::from_toml(&raw)
+    }
+
+    /// Clamps values to safe hard ceilings, so a malformed or hostile config
+    /// cannot drive heavy CPU or memory use during scanning.
+    fn normalize(&mut self) {
+        self.preview_turns = self.preview_turns.min(MAX_PREVIEW_TURNS);
+        self.max_file_bytes = self.max_file_bytes.min(MAX_FILE_BYTES_CAP);
     }
 
     /// Serializes the configuration to its canonical TOML form.
@@ -118,10 +132,12 @@ impl AppConfig {
         Ok(path)
     }
 
-    /// Parses configuration from a TOML string. Exposed for testing without
-    /// touching the filesystem.
+    /// Parses configuration from a TOML string and clamps it to safe bounds.
+    /// Exposed for testing without touching the filesystem.
     pub fn from_toml(raw: &str) -> Result<AppConfig> {
-        toml::from_str(raw).map_err(AurynError::from)
+        let mut config: AppConfig = toml::from_str(raw).map_err(AurynError::from)?;
+        config.normalize();
+        Ok(config)
     }
 }
 
@@ -142,6 +158,14 @@ mod tests {
         // An empty document should produce a fully-defaulted config.
         let parsed = AppConfig::from_toml("").unwrap();
         assert_eq!(parsed, AppConfig::default());
+    }
+
+    #[test]
+    fn excessive_bounds_are_clamped() {
+        let parsed =
+            AppConfig::from_toml("preview_turns = 100000\nmax_file_bytes = 999999999999").unwrap();
+        assert_eq!(parsed.preview_turns, MAX_PREVIEW_TURNS);
+        assert_eq!(parsed.max_file_bytes, MAX_FILE_BYTES_CAP);
     }
 
     #[test]
