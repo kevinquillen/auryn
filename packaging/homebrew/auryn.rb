@@ -19,11 +19,11 @@ class Auryn < Formula
 
   on_linux do
     on_arm do
-      url "https://github.com/kevinquillen/auryn/releases/download/v#{version}/auryn-v#{version}-aarch64-unknown-linux-gnu.tar.gz"
+      url "https://github.com/kevinquillen/auryn/releases/download/v#{version}/auryn-v#{version}-aarch64-unknown-linux-musl.tar.gz"
       sha256 "REPLACE_WITH_AARCH64_LINUX_SHA256"
     end
     on_intel do
-      url "https://github.com/kevinquillen/auryn/releases/download/v#{version}/auryn-v#{version}-x86_64-unknown-linux-gnu.tar.gz"
+      url "https://github.com/kevinquillen/auryn/releases/download/v#{version}/auryn-v#{version}-x86_64-unknown-linux-musl.tar.gz"
       sha256 "REPLACE_WITH_X86_64_LINUX_SHA256"
     end
   end
