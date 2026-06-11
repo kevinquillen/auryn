@@ -97,8 +97,8 @@ auryn config edit          # open the config in $EDITOR
 ## Search
 
 Search matches session metadata (name, provider, project path) fuzzily and
-conversation content as a case-insensitive substring, and ranks the best matches
-first. See `docs/search.md`.
+recent conversation content (the preview turns) as a case-insensitive substring,
+and ranks the best matches first. See `docs/search.md`.
 
 ## Configuration
 
