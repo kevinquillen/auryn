@@ -19,7 +19,8 @@ Changelog, and this project adheres to Semantic Versioning.
 * Command-line interface: `list`, `filter`, `search`, `resume`, `doctor`, and
   `config` subcommands, with `--json` output.
 * Fuzzy metadata search and substring content search with ranked results.
-* Release distribution configuration for GitHub Releases, Homebrew, and Scoop.
+* Release distribution configuration for GitHub Releases and Homebrew (Scoop
+  deferred).
 
 ### Fixed
 
