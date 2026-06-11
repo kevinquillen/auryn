@@ -1,7 +1,8 @@
 # Release and packaging
 
-Auryn is distributed as prebuilt binaries on GitHub Releases, with Homebrew and
-Scoop as secondary channels. See `docs/adr/0006-release-distribution.md`.
+Auryn is distributed as prebuilt binaries on GitHub Releases, with Homebrew as a
+secondary channel for macOS and Linux. Scoop is deferred. See
+`docs/adr/0006-release-distribution.md`.
 
 ## Target platforms
 
@@ -69,14 +70,23 @@ automate this).
 brew install kevinquillen/tap/auryn
 ```
 
-## Scoop
+## Windows
 
-The Scoop manifest installs the Windows archive from the GitHub Release. It
-lives in a bucket repository (for example `kevinquillen/scoop-bucket`). A
-template is in `packaging/scoop/auryn.json`; the URL and hash are updated for
-each release.
+Windows users download the `.zip` from the GitHub Release and put `auryn.exe` on
+their `PATH`. When the cargo-dist flow is used, the PowerShell installer offers a
+one-line install.
+
+## Scoop (deferred)
+
+Scoop support is deferred. It would require a separately maintained bucket
+repository (for example `kevinquillen/scoop-bucket`), and cargo-dist does not
+publish Scoop manifests, so the manifest would be updated per release. A future
+template is kept in `packaging/scoop/auryn.json`. If added later, install is:
 
 ```powershell
-scoop bucket add auryn https://github.com/kevinquillen/scoop-bucket
+scoop bucket add kevinquillen https://github.com/kevinquillen/scoop-bucket
 scoop install auryn
 ```
+
+WinGet is an alternative worth considering instead of Scoop, since it ships with
+Windows and reaches all users.

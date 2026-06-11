@@ -48,12 +48,8 @@ Homebrew (macOS and Linux):
 brew install kevinquillen/tap/auryn
 ```
 
-Scoop (Windows):
-
-```powershell
-scoop bucket add auryn https://github.com/kevinquillen/scoop-bucket
-scoop install auryn
-```
+Windows: download the `.zip` from the latest release, extract it, and put
+`auryn.exe` on your `PATH`.
 
 From source (requires a Rust toolchain):
 

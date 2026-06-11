@@ -29,11 +29,19 @@ releases.
 
 ## Decision Outcome
 
-Chosen option: "GitHub Releases plus Homebrew and Scoop." Prebuilt archives for
-the five targets are attached to a GitHub Release, with SHA-256 checksums.
-GitHub Releases is the primary channel; Homebrew is the secondary channel for
-macOS and Linux; Scoop is the Windows channel. `cargo install` remains supported
-for Rust developers but is not the primary path.
+Chosen option: "GitHub Releases plus Homebrew." Prebuilt archives for the five
+targets are attached to a GitHub Release, with SHA-256 checksums. GitHub Releases
+is the primary channel; Homebrew is the secondary channel for macOS and Linux.
+On Windows, users download the release archive directly; a one-line install via
+the cargo-dist PowerShell installer is available when the cargo-dist flow is
+used. `cargo install` remains supported for Rust developers but is not the
+primary path.
+
+Scoop was considered and deferred. It would require a separately maintained
+bucket repository, and cargo-dist does not publish Scoop manifests, so it adds
+ongoing per-release maintenance for a subset of Windows users who are already
+served by the release archive and the PowerShell installer. Scoop or WinGet can
+be added later on demand without changing this decision's foundation.
 
 cargo-dist is the chosen release-automation tool: its configuration lives in
 `Cargo.toml` under `[workspace.metadata.dist]`, and it can generate the GitHub
@@ -46,20 +54,23 @@ fully cargo-dist-managed flow. See `docs/release.md`.
 
 ### Consequences
 
-* Good: non-Rust users install via Homebrew or Scoop, or download a binary.
+* Good: non-Rust users install via Homebrew or download a binary; Windows users
+  download the archive or use the PowerShell installer.
 * Good: releases are tag-triggered and reproducible in CI.
 * Good: the security model is preserved; archives are checksummed.
-* Bad: maintaining packaging for three channels is more work than one; the
-  hand-maintained workflow and the cargo-dist config must be kept in step, or
-  one chosen as the single source of truth.
+* Good: deferring Scoop avoids a separately maintained bucket with no cargo-dist
+  automation.
+* Bad: the hand-maintained workflow and the cargo-dist config must be kept in
+  step, or one chosen as the single source of truth.
 
 ## Pros and Cons of the Options
 
-### GitHub Releases + Homebrew + Scoop (cargo-dist)
+### GitHub Releases + Homebrew (cargo-dist)
 
-* Good, because it covers every target platform with a native install path.
-* Good, because cargo-dist standardizes archive naming, checksums, and CI.
-* Neutral, because it requires per-channel package metadata (taps, buckets).
+* Good, because it covers macOS, Linux, and Windows with a low-friction path.
+* Good, because cargo-dist standardizes archive naming, checksums, and CI, and
+  automates the Homebrew formula.
+* Neutral, because it requires per-channel package metadata (a tap).
 
 ### `cargo install` only
 
