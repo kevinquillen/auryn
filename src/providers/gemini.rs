@@ -43,7 +43,7 @@ use crate::errors::Result;
 use crate::models::{MessagePreview, ProviderKind, Role, Session};
 use crate::providers::Provider;
 use crate::providers::util::{
-    max_opt, min_opt, normalize_whitespace, parse_timestamp, truncate_chars,
+    apply_working_dir, max_opt, min_opt, normalize_whitespace, parse_timestamp, truncate_chars,
 };
 
 /// Environment override for the scan root.
@@ -132,9 +132,7 @@ impl Provider for GeminiProvider {
         // <index>` path is avoided because `gemini --list-sessions` is very slow.
         let mut command = Command::new(RESUME_BIN);
         command.arg("--session-file").arg(&session.source_path);
-        if let Some(path) = &session.project_path {
-            command.current_dir(path);
-        }
+        apply_working_dir(&mut command, session.project_path.as_deref());
         Ok(command)
     }
 }
@@ -356,7 +354,10 @@ fn absorb_message(builder: &mut Builder, message: &Value) {
         builder.last_ts = Some(max_opt(builder.last_ts, ts));
     }
 
-    let text = extract_text(message.get("content"));
+    // Truncate at storage: the text is only ever used for the preview and the
+    // name, both of which are bounded, so this keeps memory bounded while every
+    // message is held for de-duplication and ordering.
+    let text = truncate_chars(&extract_text(message.get("content")), MAX_PREVIEW_CHARS);
     // Last write wins: a completed streamed message overwrites its partial form.
     builder.by_id.insert(
         id,

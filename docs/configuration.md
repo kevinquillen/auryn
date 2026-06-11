@@ -57,6 +57,10 @@ enabled = true
 Unknown keys are tolerated, so a configuration written by a newer version of
 Auryn does not break an older one.
 
+`preview_turns` and `max_file_bytes` are clamped to hard ceilings when the
+configuration is loaded (100 turns and 256 MiB respectively), so an unreasonable
+value cannot drive heavy CPU or memory use during scanning.
+
 ## Environment overrides
 
 For testing and non-standard installs, the scan root for each provider can be

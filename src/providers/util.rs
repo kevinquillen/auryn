@@ -6,7 +6,24 @@
 //! min/max timestamp range. They live here so each provider stays focused on
 //! its own on-disk shape.
 
+use std::path::Path;
+use std::process::Command;
+
 use chrono::{DateTime, Utc};
+
+/// Sets `command`'s working directory to `project_path`, but only when it is an
+/// existing directory that canonicalizes successfully. The project path comes
+/// from untrusted session files, so a missing, non-directory, or unresolvable
+/// path is ignored rather than used; the provider CLI then launches in the
+/// inherited working directory instead of an attacker-influenced one.
+pub(crate) fn apply_working_dir(command: &mut Command, project_path: Option<&Path>) {
+    if let Some(path) = project_path
+        && let Ok(canonical) = std::fs::canonicalize(path)
+        && canonical.is_dir()
+    {
+        command.current_dir(canonical);
+    }
+}
 
 /// Collapses all runs of whitespace (including newlines) into single spaces so
 /// a value can be shown on one table row.
@@ -51,6 +68,22 @@ pub(crate) fn max_opt(current: Option<DateTime<Utc>>, candidate: DateTime<Utc>) 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn apply_working_dir_uses_an_existing_directory() {
+        let mut command = Command::new("true");
+        apply_working_dir(&mut command, Some(Path::new(env!("CARGO_MANIFEST_DIR"))));
+        assert!(command.get_current_dir().is_some());
+    }
+
+    #[test]
+    fn apply_working_dir_ignores_missing_or_nonexistent_paths() {
+        let mut command = Command::new("true");
+        apply_working_dir(&mut command, None);
+        assert!(command.get_current_dir().is_none());
+        apply_working_dir(&mut command, Some(Path::new("/no/such/auryn/dir")));
+        assert!(command.get_current_dir().is_none());
+    }
 
     #[test]
     fn normalize_collapses_newlines_and_runs() {
