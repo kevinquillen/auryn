@@ -43,14 +43,18 @@ ongoing per-release maintenance for a subset of Windows users who are already
 served by the release archive and the PowerShell installer. Scoop or WinGet can
 be added later on demand without changing this decision's foundation.
 
-cargo-dist is the chosen release-automation tool: its configuration lives in
-`Cargo.toml` under `[workspace.metadata.dist]`, and it can generate the GitHub
-Actions release workflow and the Homebrew formula. The repository also ships a
-hand-maintained `.github/workflows/release.yml` that performs the same job (a
-tagged, matrixed cross-build that publishes archives and checksums to a GitHub
-Release) so releases work without any extra tooling. Running `dist init`
-regenerates the workflow from the committed config for teams that prefer the
-fully cargo-dist-managed flow. See `docs/release.md`.
+The release mechanism is a hand-maintained `.github/workflows/release.yml`: a
+tag-triggered, matrixed cross-build that verifies the tag matches the
+`Cargo.toml` version, publishes archives and checksums to a GitHub Release, and
+publishes the Homebrew formula to the tap. Versions are bumped with cargo-release
+(`cargo release ...` updates `Cargo.toml`, commits, tags, and pushes), so the
+tag and the crate version cannot drift. This keeps releases working with no extra
+tooling and a single source of truth.
+
+cargo-dist remains a viable alternative that can generate an equivalent workflow
+and Homebrew formula from `Cargo.toml` metadata. It is not configured in the
+repository; adopting it means running `dist init` and removing the hand-maintained
+workflow so there is still one source of truth. See `docs/release.md`.
 
 ### Consequences
 
