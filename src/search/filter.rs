@@ -85,7 +85,7 @@ impl Filter {
             .enumerate()
             .filter_map(|(i, s)| self.score(s, &matcher).map(|sc| (i, sc)))
             .collect();
-        scored.sort_by(|a, b| b.1.cmp(&a.1));
+        scored.sort_by_key(|&(_, score)| std::cmp::Reverse(score));
         scored.into_iter().map(|(i, _)| i).collect()
     }
 
