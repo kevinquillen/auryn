@@ -1,0 +1,9 @@
+{"type":"session.start","id":"e1","parentId":null,"timestamp":"2026-06-11T15:52:07.000Z","data":{"sessionId":"11111111-1111-1111-1111-111111111111","copilotVersion":"1.0.0"}}
+{"type":"user.message","id":"e2","parentId":"e1","timestamp":"2026-06-11T15:52:10.000Z","data":{"content":"Can you review the open tasks?","attachments":[]}}
+{"type":"assistant.turn_start","id":"e3","parentId":"e2","timestamp":"2026-06-11T15:52:11.000Z","data":{}}
+{"type":"assistant.message","id":"e4","parentId":"e2","timestamp":"2026-06-11T15:52:15.000Z","data":{"content":"I grouped the open tasks by priority.","model":"gpt"}}
+{"type":"tool.execution_start","id":"e5","parentId":"e4","timestamp":"2026-06-11T15:52:16.000Z","data":{"name":"shell"}}
+{"type":"user.message","id":"e6","parentId":"e4","timestamp":"2026-06-11T15:52:20.000Z","data":{"content":"Which environments are affected?","attachments":[]}}
+{"type":"system.message","id":"e7","parentId":"e6","timestamp":"2026-06-11T15:52:21.000Z","data":{"content":"context note that should be ignored"}}
+{"type":"assistant.message","id":"e8","parentId":"e6","timestamp":"2026-06-11T15:52:25.000Z","data":{"content":"Both staging and production are affected.","model":"gpt"}}
+{ this line is intentionally corrupt and must be skipped

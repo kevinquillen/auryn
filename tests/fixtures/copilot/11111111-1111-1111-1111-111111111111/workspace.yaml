@@ -1,0 +1,11 @@
+id: 11111111-1111-1111-1111-111111111111
+cwd: /home/dev/projects/alpha
+git_root: /home/dev/projects/alpha
+repository: dev/alpha
+host_type: github
+client_name: github/cli
+name: Review Rust CLI Code
+user_named: false
+summary_count: 0
+created_at: 2026-06-11T15:52:06.798Z
+updated_at: 2026-06-11T15:55:36.388Z
