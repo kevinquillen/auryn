@@ -10,12 +10,15 @@ Each release publishes archives for:
 
 * macOS ARM64 (`aarch64-apple-darwin`)
 * macOS x86_64 (`x86_64-apple-darwin`)
-* Linux x86_64 (`x86_64-unknown-linux-gnu`)
-* Linux ARM64 (`aarch64-unknown-linux-gnu`)
+* Linux x86_64 (`x86_64-unknown-linux-musl`)
+* Linux ARM64 (`aarch64-unknown-linux-musl`)
 * Windows x86_64 (`x86_64-pc-windows-msvc`)
 
-Unix archives are `tar.gz`, Windows archives are `zip`. Each archive has a
-matching `.sha256` checksum file.
+The Linux targets use musl, so the binaries are statically linked and run on any
+distribution regardless of its glibc version. The aarch64 target is cross-linked
+with the Rust toolchain's bundled `rust-lld`, so no external cross toolchain is
+installed. Unix archives are `tar.gz`, Windows archives are `zip`. Each archive
+has a matching `.sha256` checksum file.
 
 ## Cutting a release
 
