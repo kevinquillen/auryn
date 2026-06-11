@@ -150,3 +150,15 @@ jobs:
             git commit -q -m "auryn ${version}"
             git push -q origin HEAD
           fi
+
+  publish-crate:
+    name: Publish to crates.io
+    needs: build
+    runs-on: ubuntu-latest
+    environment: crates.io
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: cargo publish
+        run: cargo publish --locked --token ${{ secrets.CARGO_TOKEN }}

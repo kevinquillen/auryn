@@ -1,6 +1,7 @@
 # Auryn
 
 [![CI](https://github.com/kevinquillen/auryn/actions/workflows/ci.yml/badge.svg)](https://github.com/kevinquillen/auryn/actions/workflows/ci.yml)
+[![Crates.io](https://img.shields.io/crates/v/auryn)](https://crates.io/crates/auryn)
 [![Release](https://img.shields.io/github/v/release/kevinquillen/auryn?display_name=tag&sort=semver)](https://github.com/kevinquillen/auryn/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![Rust](https://img.shields.io/badge/rust-1.88%2B-orange)](https://www.rust-lang.org)
@@ -51,9 +52,10 @@ brew install kevinquillen/tap/auryn
 Windows: download the `.zip` from the latest release, extract it, and put
 `auryn.exe` on your `PATH`.
 
-From source (requires a Rust toolchain):
+With a Rust toolchain, from crates.io or from a local checkout:
 
 ```bash
+cargo install auryn
 cargo install --path .
 ```
 

@@ -1,9 +1,4 @@
 # Homebrew formula template for Auryn.
-#
-# This lives in a tap repository (for example kevinquillen/homebrew-tap) as
-# Formula/auryn.rb. The version, URLs, and SHA-256 values are updated for each
-# release; cargo-dist can generate and publish this automatically. See
-# docs/release.md.
 
 class Auryn < Formula
   desc "Browse, search, preview, and resume AI coding sessions from the terminal"
