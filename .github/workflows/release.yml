@@ -35,9 +35,9 @@ jobs:
       matrix:
         include:
           - target: aarch64-apple-darwin
-            os: macos-14
+            os: macos-latest
           - target: x86_64-apple-darwin
-            os: macos-13
+            os: macos-latest
           - target: x86_64-unknown-linux-musl
             os: ubuntu-latest
           - target: aarch64-unknown-linux-musl
@@ -94,14 +94,22 @@ jobs:
           Compress-Archive -Path "dist/$name" -DestinationPath "$name.zip"
           (Get-FileHash "$name.zip" -Algorithm SHA256).Hash.ToLower() + "  $name.zip" | Out-File -Encoding ascii "$name.zip.sha256"
 
-      - name: Publish to release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            *.tar.gz
-            *.tar.gz.sha256
-            *.zip
-            *.zip.sha256
+      - name: Upload to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="$GITHUB_REF_NAME"
+          # Create the release once; tolerate the matrix race where a sibling
+          # job creates it first.
+          if ! gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$tag" --repo "$GITHUB_REPOSITORY" \
+              --title "$tag" --generate-notes || true
+          fi
+          shopt -s nullglob
+          files=( *.tar.gz *.tar.gz.sha256 *.zip *.zip.sha256 )
+          gh release upload "$tag" --repo "$GITHUB_REPOSITORY" --clobber "${files[@]}"
 
   publish-homebrew:
     name: Publish Homebrew formula
