@@ -10,8 +10,25 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  verify:
+    name: Verify tag matches Cargo.toml
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Compare tag to crate version
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME#v}"
+          crate="$(grep -m1 '^version = ' Cargo.toml | sed -E 's/version = "(.*)"/\1/')"
+          if [ "$tag" != "$crate" ]; then
+            echo "::error::Tag v${tag} does not match Cargo.toml version ${crate}. Bump Cargo.toml and re-tag."
+            exit 1
+          fi
+          echo "Tag and Cargo.toml agree on ${crate}."
+
   build:
     name: Build ${{ matrix.target }}
+    needs: verify
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -82,3 +99,54 @@ jobs:
             *.tar.gz.sha256
             *.zip
             *.zip.sha256
+
+  publish-homebrew:
+    name: Publish Homebrew formula
+    needs: build
+    runs-on: ubuntu-latest
+    # Skip prerelease and dry-run tags (any tag containing a hyphen).
+    if: ${{ !contains(github.ref_name, '-') }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Render formula and push to tap
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag="$GITHUB_REF_NAME"
+          version="${tag#v}"
+
+          # Read the checksums the build jobs attached to the release.
+          gh release download "$tag" --repo "$GITHUB_REPOSITORY" \
+            --pattern '*.tar.gz.sha256' --dir checksums
+          sha() { awk '{print $1}' "checksums/auryn-${tag}-$1.tar.gz.sha256"; }
+          mac_arm="$(sha aarch64-apple-darwin)"
+          mac_x86="$(sha x86_64-apple-darwin)"
+          linux_arm="$(sha aarch64-unknown-linux-gnu)"
+          linux_x86="$(sha x86_64-unknown-linux-gnu)"
+
+          # The template's URLs derive from the version, so only the version and
+          # the four checksums need substituting.
+          sed \
+            -e "s/version \"[^\"]*\"/version \"${version}\"/" \
+            -e "s/REPLACE_WITH_AARCH64_APPLE_DARWIN_SHA256/${mac_arm}/" \
+            -e "s/REPLACE_WITH_X86_64_APPLE_DARWIN_SHA256/${mac_x86}/" \
+            -e "s/REPLACE_WITH_AARCH64_LINUX_SHA256/${linux_arm}/" \
+            -e "s/REPLACE_WITH_X86_64_LINUX_SHA256/${linux_x86}/" \
+            packaging/homebrew/auryn.rb > formula.rb
+
+          git clone -q "https://x-access-token:${TAP_TOKEN}@github.com/kevinquillen/homebrew-tap.git" tap
+          mkdir -p tap/Formula
+          cp formula.rb tap/Formula/auryn.rb
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Formula/auryn.rb
+          if git diff --cached --quiet; then
+            echo "Formula already up to date."
+          else
+            git commit -q -m "auryn ${version}"
+            git push -q origin HEAD
+          fi

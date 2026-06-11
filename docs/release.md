@@ -19,52 +19,70 @@ matching `.sha256` checksum file.
 
 ## Cutting a release
 
-1. Update the version in `Cargo.toml`.
-2. Move the relevant `CHANGELOG.md` entries from Unreleased into a new version
-   section.
-3. Commit the changes.
-4. Tag and push:
+The tag is the trigger, and `Cargo.toml` is the source of truth for the version.
+The two must agree: the release workflow's `verify` job fails the release if the
+tag does not match the `Cargo.toml` version, so a binary whose `--version`
+disagrees with the release tag can never ship.
+
+1. Bump the version. The simplest one-command path is
+   [`cargo-release`](https://github.com/crate-ci/cargo-release), which updates
+   `Cargo.toml`, commits, tags, and pushes in step:
+
+   ```bash
+   cargo release patch --execute   # or minor / major / 1.2.3
+   ```
+
+   Or do it by hand: edit the `Cargo.toml` version, move the relevant
+   `CHANGELOG.md` entries into a new section, commit, then:
 
    ```bash
    git tag v0.1.0
    git push origin v0.1.0
    ```
 
-Pushing a `v*` tag triggers `.github/workflows/release.yml`, which builds every
-target, packages the archives with checksums, and attaches them to a GitHub
-Release for the tag.
+Pushing a `v*` tag triggers `.github/workflows/release.yml`, which verifies the
+version, builds every target, packages the archives with checksums, attaches
+them to a GitHub Release, and publishes the Homebrew formula (see below). The
+Formula version and download URLs derive from the tag automatically; no manual
+editing of the formula is required.
 
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs on pushes and pull requests: formatting check,
 clippy, and the test suite on Linux, macOS, and Windows.
 
-## cargo-dist
+## Source of truth
 
-The repository carries cargo-dist configuration in `Cargo.toml` under
-`[workspace.metadata.dist]`, declaring the targets and installers (shell,
-PowerShell, and Homebrew). The committed `release.yml` performs the equivalent
-build-and-publish without requiring cargo-dist to be installed.
+The hand-maintained `.github/workflows/release.yml` is the single source of truth
+for releases. It verifies the version, builds every target, publishes the GitHub
+Release, and publishes the Homebrew formula, without any extra tooling.
 
-To adopt the fully cargo-dist-managed flow instead, install cargo-dist and run:
-
-```bash
-dist init
-dist generate
-```
-
-This pins `cargo-dist-version`, regenerates the release workflow from the
-committed config, and can produce the Homebrew formula. Choose either the
-hand-maintained workflow or the cargo-dist-generated one as the single source of
-truth, rather than maintaining both.
+cargo-dist is an alternative that generates an equivalent workflow and publishes
+a Homebrew formula from `Cargo.toml` metadata. To adopt it instead, install
+cargo-dist, run `dist init`, and remove the hand-maintained workflow and the
+formula template so there is one source of truth. The `[workspace.metadata.dist]`
+block in `Cargo.toml` is only needed for that path; it can otherwise be removed.
 
 ## Homebrew
 
 The Homebrew formula installs the macOS and Linux archives from the GitHub
-Release. It lives in a tap repository (for example
-`kevinquillen/homebrew-tap`). A template is in `packaging/homebrew/auryn.rb`;
-the URLs and SHA-256 values are updated for each release (cargo-dist can
-automate this).
+Release, from a tap repository named `kevinquillen/homebrew-tap`. One tap repo
+holds the formulas for any number of projects, in `Formula/`.
+
+The formula is published automatically by the `publish-homebrew` job in
+`release.yml`. On each release it reads the checksums the build jobs produced,
+fills the version and the four SHA-256 values into `packaging/homebrew/auryn.rb`,
+and commits the result to the tap. Two one-time prerequisites:
+
+* Create the public repo `kevinquillen/homebrew-tap`.
+* Add a secret named `HOMEBREW_TAP_TOKEN` to this repository: a fine-grained
+  Personal Access Token scoped to only `homebrew-tap` with `Contents: write`.
+  The default `GITHUB_TOKEN` cannot push to a separate repository, so this
+  cross-repo token is required.
+
+Prerelease tags (any tag containing a hyphen, such as `v0.0.0-test1`) skip the
+formula publish, so they can be used to dry-run the build without touching the
+tap.
 
 ```bash
 brew install kevinquillen/tap/auryn
