@@ -9,7 +9,7 @@ Changelog, and this project adheres to Semantic Versioning.
 
 * Core models, TOML configuration, and platform path handling.
 * Provider plugin system with a normalized session model.
-* Claude Code, OpenAI Codex CLI, and Gemini CLI providers.
+* Claude Code, OpenAI Codex CLI, Gemini CLI, and GitHub Copilot CLI providers.
 * Synthetic fake provider for development and architecture validation.
 * Ratatui terminal interface: session table, independently scrolling preview
   pane, slash-command framework, help and details overlays, provider cycling,

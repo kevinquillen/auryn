@@ -12,6 +12,8 @@ previews, and resumes AI coding sessions from multiple providers through a
 single terminal interface, so you can return to earlier work regardless of which
 tool created the session.
 
+![CLI Interface](assets/images/screenshot.png)
+
 ## What Auryn does not do
 
 Auryn is read-only against provider session storage and never modifies
@@ -31,8 +33,8 @@ gateway, or credential manager.
 * Claude Code
 * OpenAI Codex CLI
 * Gemini CLI
+* GitHub Copilot CLI
 * Aider (coming soon)
-* CoPilot (coming soon)
 
 Auryn reads each tool's own on-disk session storage. New providers can be added
 without changing the TUI or CLI. See `docs/providers.md`.

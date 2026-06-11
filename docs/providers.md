@@ -64,6 +64,18 @@ on disk; remove them with `gemini --delete-session <index>`.
 The in-place `gemini --resume <index>` path is not used because it requires the
 `gemini --list-sessions` call, which is very slow, plus a second process launch.
 
+## GitHub Copilot CLI
+
+* Storage: `~/.copilot/session-state/<session-id>/`, where the directory name is
+  the session id. The conversation is `events.jsonl`, and a sibling
+  `workspace.yaml` holds the session name, working directory, and timestamps.
+* Format: `events.jsonl` records are `{ type, id, parentId, timestamp, data }`.
+  `user.message` and `assistant.message` carry their text in `data.content` (a
+  plain string); other event types (tool, hook, turn, session) are skipped.
+* Name: the `workspace.yaml` name, falling back to the first user message.
+* Resume: `copilot --resume=<id>`, run in the session's project directory.
+* Root override: `AURYN_COPILOT_DIR`.
+
 ## Adding a provider
 
 Implement the `Provider` trait and register it in `src/providers/mod.rs`. Add
