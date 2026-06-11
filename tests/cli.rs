@@ -190,6 +190,9 @@ fn config_print_shows_defaults() {
     assert!(text.contains("[providers.claude]"));
 }
 
+// The fake provider's resume command is `echo`, which is a real binary on
+// Unix but a shell builtin on Windows, so this hand-off check is Unix-only.
+#[cfg(unix)]
 #[test]
 fn resume_executes_provider_command_and_returns_its_code() {
     // The fake provider's resume command is `echo resume <id>`, so a successful
