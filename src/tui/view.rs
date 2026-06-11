@@ -27,6 +27,7 @@ fn provider_color(provider: ProviderKind) -> Color {
         ProviderKind::Claude => Color::Magenta,
         ProviderKind::Codex => Color::Green,
         ProviderKind::Gemini => Color::Blue,
+        ProviderKind::Copilot => Color::Cyan,
         ProviderKind::Fake => Color::Yellow,
     }
 }

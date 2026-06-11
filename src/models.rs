@@ -18,6 +18,7 @@ pub enum ProviderKind {
     Claude,
     Codex,
     Gemini,
+    Copilot,
     /// Synthetic provider used to validate the architecture before real
     /// provider scanners exist. Never represents real user data.
     Fake,
@@ -30,6 +31,7 @@ impl ProviderKind {
             ProviderKind::Claude => "claude",
             ProviderKind::Codex => "codex",
             ProviderKind::Gemini => "gemini",
+            ProviderKind::Copilot => "copilot",
             ProviderKind::Fake => "fake",
         }
     }
@@ -40,16 +42,18 @@ impl ProviderKind {
             ProviderKind::Claude => "Claude",
             ProviderKind::Codex => "Codex",
             ProviderKind::Gemini => "Gemini",
+            ProviderKind::Copilot => "Copilot",
             ProviderKind::Fake => "Fake",
         }
     }
 
-    /// Every provider kind, in the MVP support order.
-    pub fn all() -> [ProviderKind; 4] {
+    /// Every provider kind, in support order.
+    pub fn all() -> [ProviderKind; 5] {
         [
             ProviderKind::Claude,
             ProviderKind::Codex,
             ProviderKind::Gemini,
+            ProviderKind::Copilot,
             ProviderKind::Fake,
         ]
     }
@@ -69,6 +73,7 @@ impl FromStr for ProviderKind {
             "claude" => Ok(ProviderKind::Claude),
             "codex" | "openai" => Ok(ProviderKind::Codex),
             "gemini" => Ok(ProviderKind::Gemini),
+            "copilot" => Ok(ProviderKind::Copilot),
             "fake" => Ok(ProviderKind::Fake),
             other => Err(format!("unknown provider: {other}")),
         }
