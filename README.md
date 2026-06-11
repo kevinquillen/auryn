@@ -1,12 +1,15 @@
 # Auryn
 
+[![CI](https://github.com/kevinquillen/auryn/actions/workflows/ci.yml/badge.svg)](https://github.com/kevinquillen/auryn/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/kevinquillen/auryn?display_name=tag&sort=semver)](https://github.com/kevinquillen/auryn/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Rust](https://img.shields.io/badge/rust-1.88%2B-orange)](https://www.rust-lang.org)
+[![Platforms](https://img.shields.io/badge/platforms-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey)](#install)
+
 Auryn is a local-first AI session browser and resumer. It discovers, searches,
 previews, and resumes AI coding sessions from multiple providers through a
 single terminal interface, so you can return to earlier work regardless of which
 tool created the session.
-
-The name comes from the medallion in The NeverEnding Story: a guide back to
-journeys you have already begun.
 
 ## What Auryn does not do
 
@@ -27,6 +30,8 @@ gateway, or credential manager.
 * Claude Code
 * OpenAI Codex CLI
 * Gemini CLI
+* Aider (coming soon)
+* CoPilot (coming soon)
 
 Auryn reads each tool's own on-disk session storage. New providers can be added
 without changing the TUI or CLI. See `docs/providers.md`.
