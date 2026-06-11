@@ -27,6 +27,10 @@ fn gemini_fixtures_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/gemini")
 }
 
+fn copilot_fixtures_dir() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/copilot")
+}
+
 /// Builds a command with an isolated config dir. `fake` controls whether the
 /// fake provider is enabled and pointed at the fixtures. Real providers are
 /// isolated to non-existent roots by `base_command`.
@@ -66,6 +70,14 @@ fn auryn_gemini(args: &[&str]) -> std::process::Output {
     cmd.output().expect("failed to run auryn binary")
 }
 
+/// Runs the binary with the Copilot provider pointed at the Copilot fixtures and
+/// the fake provider disabled.
+fn auryn_copilot(args: &[&str]) -> std::process::Output {
+    let mut cmd = base_command(args);
+    cmd.env("AURYN_COPILOT_DIR", copilot_fixtures_dir());
+    cmd.output().expect("failed to run auryn binary")
+}
+
 /// Builds a base command that isolates config and points every real provider at
 /// a non-existent root, so no test ever reads the developer's real session
 /// storage. Individual helpers override a single provider's root as needed.
@@ -77,6 +89,7 @@ fn base_command(args: &[&str]) -> Command {
     cmd.env("AURYN_CLAUDE_DIR", manifest.join("target/test-no-claude"));
     cmd.env("AURYN_CODEX_DIR", manifest.join("target/test-no-codex"));
     cmd.env("AURYN_GEMINI_DIR", manifest.join("target/test-no-gemini"));
+    cmd.env("AURYN_COPILOT_DIR", manifest.join("target/test-no-copilot"));
     // Default to the fake provider being off; `auryn` turns it on explicitly.
     cmd.env_remove("AURYN_FAKE");
     cmd.env_remove("AURYN_FAKE_DIR");
@@ -144,6 +157,15 @@ fn list_renders_gemini_fixture_sessions() {
     assert!(text.contains("How do I run the tests?"));
     // The injected session-context turn must not surface as a name.
     assert!(!text.contains("session_context"));
+}
+
+#[test]
+fn list_renders_copilot_fixture_sessions() {
+    let out = auryn_copilot(&["list"]);
+    assert!(out.status.success());
+    let text = stdout(&out);
+    assert!(text.contains("Copilot"));
+    assert!(text.contains("Review Rust CLI Code"));
 }
 
 #[test]
