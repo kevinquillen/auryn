@@ -58,10 +58,10 @@ for releases. It verifies the version, builds every target, publishes the GitHub
 Release, and publishes the Homebrew formula, without any extra tooling.
 
 cargo-dist is an alternative that generates an equivalent workflow and publishes
-a Homebrew formula from `Cargo.toml` metadata. To adopt it instead, install
-cargo-dist, run `dist init`, and remove the hand-maintained workflow and the
-formula template so there is one source of truth. The `[workspace.metadata.dist]`
-block in `Cargo.toml` is only needed for that path; it can otherwise be removed.
+a Homebrew formula from `Cargo.toml` metadata. It is not configured in this
+repository. To adopt it instead, install cargo-dist, run `dist init` (which adds
+its config and generates the workflow), and remove the hand-maintained workflow
+and the formula template so there is one source of truth.
 
 ## Homebrew
 

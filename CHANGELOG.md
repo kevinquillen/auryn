@@ -33,7 +33,3 @@ Changelog, and this project adheres to Semantic Versioning.
 
 * Resume builds its command from the already-selected session in the TUI and
   scans only the relevant provider on the command line, avoiding a full re-scan.
-
-## [0.1.0] - Unreleased
-
-Initial development release.

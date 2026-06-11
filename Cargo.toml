@@ -24,26 +24,18 @@ serde_json = "1.0.150"
 thiserror = "2.0.18"
 toml = "1.1.2"
 
-# Release-build profile used by cargo-dist (see docs/release.md). Inherits the
-# standard release profile and enables thin LTO for smaller, faster binaries.
-[profile.dist]
-inherits = "release"
-lto = "thin"
+# cargo-release configuration (https://github.com/crate-ci/cargo-release).
+# `cargo release patch --execute` bumps this version, commits, tags `vX.Y.Z`,
+# and pushes; the release workflow verifies the tag matches and publishes. This
+# is a binary, not a crates.io library, so publishing is disabled.
+[package.metadata.release]
+publish = false
+tag-name = "v{{version}}"
+pre-release-commit-message = "chore: release {{version}}"
+tag-message = "auryn {{version}}"
 
-# Single-crate workspace so cargo-dist can read its configuration below.
-[workspace]
-
-# cargo-dist configuration (https://opensource.axo.dev/cargo-dist/). The release
-# workflow at .github/workflows/release.yml builds these targets; run
-# `dist init` to regenerate that workflow from this config. See docs/release.md.
-[workspace.metadata.dist]
-cargo-dist-version = "0.30.0"
-ci = ["github"]
-installers = ["shell", "powershell", "homebrew"]
-targets = [
-    "aarch64-apple-darwin",
-    "x86_64-apple-darwin",
-    "x86_64-unknown-linux-gnu",
-    "aarch64-unknown-linux-gnu",
-    "x86_64-pc-windows-msvc",
-]
+[[package.metadata.release.pre-release-replacements]]
+file = "CHANGELOG.md"
+search = "## \\[Unreleased\\]"
+replace = "## [Unreleased]\n\n## [{{version}}] - {{date}}"
+exactly = 1
