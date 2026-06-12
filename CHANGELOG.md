@@ -3,7 +3,7 @@
 All notable changes to Auryn are documented here. The format is based on Keep a
 Changelog, and this project adheres to Semantic Versioning.
 
-## [Unreleased]
+## [v0.2.0]
 
 ### Added
 
