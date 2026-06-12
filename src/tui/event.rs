@@ -99,11 +99,11 @@ fn handle_normal(state: &mut TuiState, key: KeyEvent) -> Action {
             Action::None
         }
         KeyCode::PageUp => {
-            state.scroll_preview_up(PREVIEW_PAGE);
+            state.previous_page();
             Action::None
         }
         KeyCode::PageDown => {
-            state.scroll_preview_down(PREVIEW_PAGE);
+            state.next_page();
             Action::None
         }
         KeyCode::Enter => match state.selected_session() {

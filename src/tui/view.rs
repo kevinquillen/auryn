@@ -75,7 +75,7 @@ fn render_table(frame: &mut Frame, area: Rect, state: &TuiState) {
     .style(Style::default().add_modifier(Modifier::BOLD));
 
     let dim = Style::default().add_modifier(Modifier::DIM);
-    let rows = state.visible_sessions().map(|s| {
+    let rows = state.page_sessions().map(|s| {
         Row::new(vec![
             Cell::from(s.provider.display_name())
                 .style(Style::default().fg(provider_color(s.provider))),
@@ -94,11 +94,21 @@ fn render_table(frame: &mut Frame, area: Rect, state: &TuiState) {
         Constraint::Min(10),
     ];
 
-    let title = format!(
-        " Sessions ({} of {}) ",
-        state.visible_count(),
-        state.total_count()
-    );
+    let title = if state.page_count() > 1 {
+        format!(
+            " Sessions (page {} of {}, {} of {}) ",
+            state.current_page() + 1,
+            state.page_count(),
+            state.visible_count(),
+            state.total_count()
+        )
+    } else {
+        format!(
+            " Sessions ({} of {}) ",
+            state.visible_count(),
+            state.total_count()
+        )
+    };
     let table = Table::new(rows, widths)
         .header(header)
         .column_spacing(2)
@@ -107,7 +117,7 @@ fn render_table(frame: &mut Frame, area: Rect, state: &TuiState) {
 
     let mut table_state = TableState::default();
     if state.visible_count() > 0 {
-        table_state.select(Some(state.selected_index()));
+        table_state.select(Some(state.selected_on_page()));
     }
     frame.render_stateful_widget(table, area, &mut table_state);
 }
@@ -206,7 +216,7 @@ fn render_status(frame: &mut Frame, area: Rect, state: &TuiState) {
 }
 
 fn render_footer(frame: &mut Frame, area: Rect) {
-    let hint = "Enter Resume   / Filter   P Provider   R Refresh   D Details   ? Help   Q Quit";
+    let hint = "Enter Resume   / Filter   P Provider   PgUp/PgDn Page   R Refresh   D Details   ? Help   Q Quit";
     frame.render_widget(
         Paragraph::new(Line::from(Span::styled(
             hint,
