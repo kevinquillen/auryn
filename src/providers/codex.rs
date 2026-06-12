@@ -29,7 +29,7 @@ use directories::BaseDirs;
 use serde_json::Value;
 
 use crate::config::{AppConfig, ProviderSettings};
-use crate::errors::Result;
+use crate::errors::{AurynError, Result};
 use crate::models::{MessagePreview, ProviderKind, Role, Session};
 use crate::providers::Provider;
 use crate::providers::util::{
@@ -121,6 +121,55 @@ impl Provider for CodexProvider {
         apply_working_dir(&mut command, session.project_path.as_deref());
         Ok(command)
     }
+
+    fn read_messages(&self, session: &Session, config: &AppConfig) -> Result<Vec<MessagePreview>> {
+        collect_messages(&session.source_path, config)
+    }
+}
+
+/// Reads every conversational turn from a rollout file in file order,
+/// untruncated, for export. Applies the same size bound and tolerant parsing as
+/// [`parse_session`], and the same injected-context filtering, so the export
+/// matches what the session list considers real conversation.
+fn collect_messages(path: &Path, config: &AppConfig) -> Result<Vec<MessagePreview>> {
+    let metadata = std::fs::metadata(path)?;
+    if metadata.len() > config.max_file_bytes {
+        return Err(AurynError::FileTooLarge {
+            path: path.to_path_buf(),
+            size: metadata.len(),
+        });
+    }
+
+    let reader = BufReader::new(File::open(path)?);
+    let mut messages = Vec::new();
+    for line in reader.lines() {
+        let Ok(line) = line else { continue };
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        let Ok(record) = serde_json::from_str::<Value>(trimmed) else {
+            continue;
+        };
+        if record.get("type").and_then(Value::as_str) != Some("response_item") {
+            continue;
+        }
+        let Some(payload) = record.get("payload") else {
+            continue;
+        };
+        if let Some((role, text)) = message_from_payload(payload) {
+            let timestamp = record
+                .get("timestamp")
+                .and_then(Value::as_str)
+                .and_then(parse_timestamp);
+            messages.push(MessagePreview {
+                role,
+                content: text,
+                timestamp,
+            });
+        }
+    }
+    Ok(messages)
 }
 
 /// Recursively collects `.jsonl` files under `dir`, bounded by `depth`.
@@ -246,26 +295,9 @@ fn absorb_record(builder: &mut Builder, record: &Value, preview_turns: usize) {
 /// Folds a `response_item` payload into the builder when it is a conversational
 /// `user`/`assistant` message with readable text.
 fn absorb_message(builder: &mut Builder, payload: &Value, preview_turns: usize) {
-    if payload.get("type").and_then(Value::as_str) != Some("message") {
+    let Some((role, text)) = message_from_payload(payload) else {
         return;
-    }
-    let role = match payload.get("role").and_then(Value::as_str) {
-        Some("assistant") => Role::Assistant,
-        Some("user") => Role::User,
-        // `developer`/`system` are instructions, not conversation.
-        _ => return,
     };
-
-    let text = extract_text(payload.get("content"));
-    if text.trim().is_empty() {
-        return;
-    }
-    // Codex injects AGENTS.md and environment/instruction context as `user`
-    // turns; these are not real conversation, so exclude them from the name,
-    // count, and preview.
-    if role == Role::User && is_injected_context(&text) {
-        return;
-    }
 
     if role == Role::User && builder.first_user_text.is_none() {
         builder.first_user_text = Some(truncate_chars(&normalize_whitespace(&text), 80));
@@ -282,6 +314,32 @@ fn absorb_message(builder: &mut Builder, payload: &Value, preview_turns: usize) 
             timestamp: None,
         });
     }
+}
+
+/// Extracts a conversational turn from a `response_item` payload, or `None` when
+/// it is not a readable `user`/`assistant` message. `developer`/`system`
+/// instruction roles, text-less items, and Codex-injected context (AGENTS.md,
+/// environment blocks) are excluded so the export matches the session list. The
+/// returned text is untruncated.
+fn message_from_payload(payload: &Value) -> Option<(Role, String)> {
+    if payload.get("type").and_then(Value::as_str) != Some("message") {
+        return None;
+    }
+    let role = match payload.get("role").and_then(Value::as_str) {
+        Some("assistant") => Role::Assistant,
+        Some("user") => Role::User,
+        // `developer`/`system` are instructions, not conversation.
+        _ => return None,
+    };
+
+    let text = extract_text(payload.get("content"));
+    if text.trim().is_empty() {
+        return None;
+    }
+    if role == Role::User && is_injected_context(&text) {
+        return None;
+    }
+    Some((role, text))
 }
 
 /// True when a `user` message is Codex-injected context (AGENTS.md, the

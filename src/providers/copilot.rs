@@ -25,7 +25,7 @@ use serde::Deserialize;
 use serde_json::Value;
 
 use crate::config::{AppConfig, ProviderSettings};
-use crate::errors::Result;
+use crate::errors::{AurynError, Result};
 use crate::models::{MessagePreview, ProviderKind, Role, Session};
 use crate::providers::Provider;
 use crate::providers::util::{
@@ -111,6 +111,45 @@ impl Provider for CopilotProvider {
         apply_working_dir(&mut command, session.project_path.as_deref());
         Ok(command)
     }
+
+    fn read_messages(&self, session: &Session, config: &AppConfig) -> Result<Vec<MessagePreview>> {
+        collect_messages(&session.source_path, config)
+    }
+}
+
+/// Reads every conversational turn from an event log in file order,
+/// untruncated, for export. `source_path` points at the session's
+/// `events.jsonl`. Applies the same size bound and tolerant parsing as
+/// [`parse_session`].
+fn collect_messages(path: &Path, config: &AppConfig) -> Result<Vec<MessagePreview>> {
+    let metadata = std::fs::metadata(path)?;
+    if metadata.len() > config.max_file_bytes {
+        return Err(AurynError::FileTooLarge {
+            path: path.to_path_buf(),
+            size: metadata.len(),
+        });
+    }
+
+    let reader = BufReader::new(File::open(path)?);
+    let mut messages = Vec::new();
+    for line in reader.lines() {
+        let Ok(line) = line else { continue };
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        let Ok(record) = serde_json::from_str::<Value>(trimmed) else {
+            continue;
+        };
+        if let Some((role, content, timestamp)) = message_from_event(&record) {
+            messages.push(MessagePreview {
+                role,
+                content,
+                timestamp,
+            });
+        }
+    }
+    Ok(messages)
 }
 
 /// Returns the per-session directories directly under the session-state root.
@@ -228,31 +267,21 @@ fn parse_session(dir: &Path, config: &AppConfig) -> Option<Session> {
 /// Folds a single event into the builder when it is a `user.message` or
 /// `assistant.message` with readable text.
 fn absorb_event(builder: &mut Builder, record: &Value, preview_turns: usize) {
-    let timestamp = record
+    if let Some(ts) = record
         .get("timestamp")
         .and_then(Value::as_str)
-        .and_then(parse_timestamp);
-    if let Some(ts) = timestamp {
+        .and_then(parse_timestamp)
+    {
         builder.first_ts = Some(min_opt(builder.first_ts, ts));
         builder.last_ts = Some(max_opt(builder.last_ts, ts));
     }
 
-    let role = match record.get("type").and_then(Value::as_str) {
-        Some("user.message") => Role::User,
-        Some("assistant.message") => Role::Assistant,
-        _ => return,
-    };
-    let content = record
-        .get("data")
-        .and_then(|data| data.get("content"))
-        .and_then(Value::as_str)
-        .unwrap_or("");
-    if content.trim().is_empty() {
+    let Some((role, content, timestamp)) = message_from_event(record) else {
         return;
-    }
+    };
 
     if role == Role::User && builder.first_user_text.is_none() {
-        builder.first_user_text = Some(truncate_chars(&normalize_whitespace(content), 80));
+        builder.first_user_text = Some(truncate_chars(&normalize_whitespace(&content), 80));
     }
 
     builder.message_count += 1;
@@ -262,10 +291,34 @@ fn absorb_event(builder: &mut Builder, record: &Value, preview_turns: usize) {
         }
         builder.preview.push_back(MessagePreview {
             role,
-            content: truncate_chars(content, MAX_PREVIEW_CHARS),
+            content: truncate_chars(&content, MAX_PREVIEW_CHARS),
             timestamp,
         });
     }
+}
+
+/// Extracts a conversational turn from an event, or `None` when it is not a
+/// `user.message`/`assistant.message` with readable text. The returned text is
+/// untruncated.
+fn message_from_event(record: &Value) -> Option<(Role, String, Option<DateTime<Utc>>)> {
+    let role = match record.get("type").and_then(Value::as_str) {
+        Some("user.message") => Role::User,
+        Some("assistant.message") => Role::Assistant,
+        _ => return None,
+    };
+    let content = record
+        .get("data")
+        .and_then(|data| data.get("content"))
+        .and_then(Value::as_str)
+        .unwrap_or("");
+    if content.trim().is_empty() {
+        return None;
+    }
+    let timestamp = record
+        .get("timestamp")
+        .and_then(Value::as_str)
+        .and_then(parse_timestamp);
+    Some((role, content.to_string(), timestamp))
 }
 
 #[cfg(test)]

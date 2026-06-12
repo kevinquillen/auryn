@@ -10,6 +10,7 @@ use std::process::Command;
 
 use crate::config::AppConfig;
 use crate::errors::{AurynError, Result};
+use crate::export::Transcript;
 use crate::models::{ProviderKind, Session};
 use crate::providers::{self, Provider};
 use crate::search::Filter;
@@ -86,6 +87,23 @@ impl App {
     /// client to resume. Only that provider is scanned, so a resume does not
     /// re-parse the other providers' sessions.
     pub fn resume_command(&self, session_id: &str) -> Result<Command> {
+        let (provider, session) = self.locate(session_id)?;
+        provider.resume_command(&session, &self.config)
+    }
+
+    /// Reads a session's full conversation and bundles it with its metadata for
+    /// export. Like resume, the id must carry its provider prefix, so only the
+    /// owning provider is scanned.
+    pub fn transcript(&self, session_id: &str) -> Result<Transcript> {
+        let (provider, session) = self.locate(session_id)?;
+        let messages = provider.read_messages(&session, &self.config)?;
+        Ok(Transcript { session, messages })
+    }
+
+    /// Resolves a prefixed session id to its owning provider and the scanned
+    /// session. The provider prefix selects which client to scan in O(1); the
+    /// full id must then match exactly. Shared by resume and export.
+    fn locate(&self, session_id: &str) -> Result<(&dyn Provider, Session)> {
         let kind = session_id
             .split_once(':')
             .and_then(|(prefix, _)| prefix.parse::<ProviderKind>().ok())
@@ -99,7 +117,7 @@ impl App {
 
         let sessions = provider.scan(&self.config)?;
         match sessions.into_iter().find(|s| s.id == session_id) {
-            Some(session) => provider.resume_command(&session, &self.config),
+            Some(session) => Ok((provider.as_ref(), session)),
             None => Err(AurynError::UnknownSession(session_id.to_string())),
         }
     }

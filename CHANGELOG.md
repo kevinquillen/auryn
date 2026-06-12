@@ -5,6 +5,11 @@ Changelog, and this project adheres to Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+
+* `export` subcommand: write a session's full conversation as Markdown or JSON,
+  to stdout or a file.
+
 ## [v0.1.1]
 
 * GitHub Copilot CLI provider.

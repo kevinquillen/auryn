@@ -85,6 +85,52 @@ fn session_name_falls_back_to_first_user_message() {
 }
 
 #[test]
+fn read_messages_returns_all_readable_turns_in_order() {
+    let sessions = scan();
+    let widget = sessions
+        .iter()
+        .find(|s| s.provider_session_id == "11111111-1111-1111-1111-111111111111")
+        .expect("widget session present");
+    let provider = ClaudeProvider::new(Some(fixtures_root()));
+    let messages = provider
+        .read_messages(widget, &AppConfig::default())
+        .unwrap();
+
+    // The full read applies the same filtering as the preview (meta, tool-only,
+    // and corrupt lines excluded), so it returns the same four readable turns
+    // in chronological order, regardless of the preview-turn limit.
+    assert_eq!(messages.len(), 4);
+    assert_eq!(messages[0].role, Role::User);
+    assert!(messages[0].content.contains("review the open tasks"));
+    assert_eq!(messages.last().unwrap().role, Role::Assistant);
+    assert!(
+        messages
+            .last()
+            .unwrap()
+            .content
+            .contains("Both staging and production")
+    );
+}
+
+#[test]
+fn read_messages_is_not_bounded_by_preview_turns() {
+    // With a preview limit of one, the bounded preview keeps a single turn but
+    // the full read still returns every readable turn.
+    let config = AppConfig {
+        preview_turns: 1,
+        ..AppConfig::default()
+    };
+    let provider = ClaudeProvider::new(Some(fixtures_root()));
+    let sessions = provider.scan(&config).unwrap();
+    let widget = sessions
+        .iter()
+        .find(|s| s.provider_session_id == "11111111-1111-1111-1111-111111111111")
+        .expect("widget session present");
+    assert_eq!(widget.preview_messages.len(), 1);
+    assert_eq!(provider.read_messages(widget, &config).unwrap().len(), 4);
+}
+
+#[test]
 fn oversized_files_are_skipped() {
     let config = AppConfig {
         max_file_bytes: 1,

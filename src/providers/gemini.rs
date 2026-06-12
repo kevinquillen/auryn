@@ -39,7 +39,7 @@ use directories::BaseDirs;
 use serde_json::Value;
 
 use crate::config::{AppConfig, ProviderSettings};
-use crate::errors::Result;
+use crate::errors::{AurynError, Result};
 use crate::models::{MessagePreview, ProviderKind, Role, Session};
 use crate::providers::Provider;
 use crate::providers::util::{
@@ -135,6 +135,54 @@ impl Provider for GeminiProvider {
         apply_working_dir(&mut command, session.project_path.as_deref());
         Ok(command)
     }
+
+    fn read_messages(&self, session: &Session, config: &AppConfig) -> Result<Vec<MessagePreview>> {
+        collect_messages(&session.source_path, config)
+    }
+}
+
+/// Reads the full, de-duplicated, time-ordered conversation from a Gemini
+/// session file, untruncated, for export. Reuses the same record folding and
+/// finalize steps as [`parse_session`] but stores complete message text (the
+/// scan path truncates at storage to bound memory); the file-size bound still
+/// caps total memory.
+fn collect_messages(path: &Path, config: &AppConfig) -> Result<Vec<MessagePreview>> {
+    let metadata = std::fs::metadata(path)?;
+    if metadata.len() > config.max_file_bytes {
+        return Err(AurynError::FileTooLarge {
+            path: path.to_path_buf(),
+            size: metadata.len(),
+        });
+    }
+
+    let reader = BufReader::new(File::open(path)?);
+    let mut builder = Builder {
+        session_id: None,
+        first_ts: None,
+        last_ts: None,
+        by_id: HashMap::new(),
+    };
+    for line in reader.lines() {
+        let Ok(line) = line else { continue };
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        let Ok(record) = serde_json::from_str::<Value>(trimmed) else {
+            continue;
+        };
+        absorb_record(&mut builder, &record, usize::MAX);
+    }
+
+    let messages = finalize_messages(builder.by_id)
+        .into_iter()
+        .map(|m| MessagePreview {
+            role: m.role,
+            content: m.text,
+            timestamp: m.timestamp,
+        })
+        .collect();
+    Ok(messages)
 }
 
 /// Collapses Gemini fork lineages for display. Continuing a Gemini session
@@ -252,18 +300,11 @@ fn parse_session(path: &Path, project_root: Option<&Path>, config: &AppConfig) -
             Ok(value) => value,
             Err(_) => continue,
         };
-        absorb_record(&mut builder, &record);
+        absorb_record(&mut builder, &record, MAX_PREVIEW_CHARS);
     }
 
     // De-duplicated, ordered, conversational messages.
-    let mut messages: Vec<GMessage> = builder
-        .by_id
-        .into_values()
-        .filter(|m| !m.text.trim().is_empty())
-        .filter(|m| !(m.role == Role::User && is_injected_context(&m.text)))
-        .collect();
-    messages.sort_by_key(|m| m.timestamp);
-
+    let messages = finalize_messages(builder.by_id);
     if messages.is_empty() {
         return None;
     }
@@ -307,8 +348,23 @@ fn parse_session(path: &Path, project_root: Option<&Path>, config: &AppConfig) -
     })
 }
 
-/// Folds one record (header, `$set`, or message) into the builder.
-fn absorb_record(builder: &mut Builder, record: &Value) {
+/// Reduces the de-duplicated message map to ordered, conversational messages:
+/// drops empty and injected-context turns, then sorts by timestamp. Shared by
+/// the scan (preview) and export (full) paths so both agree on what counts.
+fn finalize_messages(by_id: HashMap<String, GMessage>) -> Vec<GMessage> {
+    let mut messages: Vec<GMessage> = by_id
+        .into_values()
+        .filter(|m| !m.text.trim().is_empty())
+        .filter(|m| !(m.role == Role::User && is_injected_context(&m.text)))
+        .collect();
+    messages.sort_by_key(|m| m.timestamp);
+    messages
+}
+
+/// Folds one record (header, `$set`, or message) into the builder. `max_chars`
+/// bounds the stored text per message: the scan path truncates to keep memory
+/// bounded, while export passes `usize::MAX` to retain full text.
+fn absorb_record(builder: &mut Builder, record: &Value, max_chars: usize) {
     // Header line.
     if record.get("kind").is_some() {
         if let Some(id) = record.get("sessionId").and_then(Value::as_str) {
@@ -324,18 +380,19 @@ fn absorb_record(builder: &mut Builder, record: &Value) {
         update_ts(builder, set.get("lastUpdated"));
         if let Some(Value::Array(messages)) = set.get("messages") {
             for message in messages {
-                absorb_message(builder, message);
+                absorb_message(builder, message, max_chars);
             }
         }
         return;
     }
 
     // Otherwise it is a streamed message record.
-    absorb_message(builder, record);
+    absorb_message(builder, record, max_chars);
 }
 
-/// Folds a single message object into the builder, de-duplicating by `id`.
-fn absorb_message(builder: &mut Builder, message: &Value) {
+/// Folds a single message object into the builder, de-duplicating by `id` and
+/// bounding stored text to `max_chars`.
+fn absorb_message(builder: &mut Builder, message: &Value, max_chars: usize) {
     let role = match message.get("type").and_then(Value::as_str) {
         Some("user") => Role::User,
         Some("gemini") | Some("assistant") => Role::Assistant,
@@ -354,10 +411,7 @@ fn absorb_message(builder: &mut Builder, message: &Value) {
         builder.last_ts = Some(max_opt(builder.last_ts, ts));
     }
 
-    // Truncate at storage: the text is only ever used for the preview and the
-    // name, both of which are bounded, so this keeps memory bounded while every
-    // message is held for de-duplication and ordering.
-    let text = truncate_chars(&extract_text(message.get("content")), MAX_PREVIEW_CHARS);
+    let text = truncate_chars(&extract_text(message.get("content")), max_chars);
     // Last write wins: a completed streamed message overwrites its partial form.
     builder.by_id.insert(
         id,

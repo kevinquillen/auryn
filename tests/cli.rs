@@ -231,6 +231,60 @@ fn resume_unknown_session_fails() {
 }
 
 #[test]
+fn export_markdown_includes_metadata_and_turns() {
+    let out = auryn(
+        &["export", "fake:fixture-valid-001", "--format", "md"],
+        true,
+    );
+    assert!(out.status.success());
+    let text = stdout(&out);
+    assert!(text.contains("# Task Review"));
+    assert!(text.contains("- Provider: Fake"));
+    assert!(text.contains("- Session: fake:fixture-valid-001"));
+    assert!(text.contains("## User"));
+    assert!(text.contains("Can you review the open tasks?"));
+    assert!(text.contains("## Assistant"));
+    assert!(text.contains("Both staging and production"));
+}
+
+#[test]
+fn export_json_is_parseable_with_full_messages() {
+    let out = auryn(
+        &["export", "fake:fixture-valid-001", "--format", "json"],
+        true,
+    );
+    assert!(out.status.success());
+    let value: serde_json::Value = serde_json::from_str(&stdout(&out)).expect("valid JSON");
+    assert_eq!(value["id"], "fake:fixture-valid-001");
+    assert_eq!(value["provider"], "fake");
+    let messages = value["messages"].as_array().expect("messages array");
+    // The fixture has four turns; the full export emits all of them.
+    assert_eq!(messages.len(), 4);
+    assert_eq!(value["message_count"], 4);
+}
+
+#[test]
+fn export_defaults_to_markdown() {
+    let out = auryn(&["export", "fake:fixture-valid-001"], true);
+    assert!(out.status.success());
+    assert!(stdout(&out).contains("# Task Review"));
+}
+
+#[test]
+fn export_without_provider_prefix_is_rejected_with_guidance() {
+    let out = auryn(&["export", "abc-123"], true);
+    assert!(!out.status.success());
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(stderr.contains("provider:session_id"));
+}
+
+#[test]
+fn export_unknown_session_fails() {
+    let out = auryn(&["export", "fake:does-not-exist"], true);
+    assert!(!out.status.success());
+}
+
+#[test]
 fn resume_without_provider_prefix_is_rejected_with_guidance() {
     // A bare native id (what a provider CLI prints) lacks the provider prefix
     // resume needs, so it must fail with a message that states the form.
