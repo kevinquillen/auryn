@@ -9,6 +9,9 @@
 use crate::models::{ProviderKind, Session};
 use crate::search::Filter;
 
+/// Number of sessions shown per page in the list view.
+pub const PAGE_SIZE: usize = 25;
+
 /// Input mode the interface is currently in.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Mode {
@@ -120,6 +123,32 @@ impl TuiState {
         self.visible.iter().map(|&i| &self.sessions[i])
     }
 
+    // --- Pagination ---------------------------------------------------------
+
+    /// Zero-based index of the page the selection currently falls on. The page
+    /// is derived from the selection so there is no separate page state to keep
+    /// in sync as the selection or filter changes.
+    pub fn current_page(&self) -> usize {
+        self.selected / PAGE_SIZE
+    }
+
+    /// Total number of pages, always at least one even when nothing is visible.
+    pub fn page_count(&self) -> usize {
+        self.visible.len().div_ceil(PAGE_SIZE).max(1)
+    }
+
+    /// The selection's position within the current page, for row highlighting.
+    pub fn selected_on_page(&self) -> usize {
+        self.selected % PAGE_SIZE
+    }
+
+    /// The sessions on the current page, in display order.
+    pub fn page_sessions(&self) -> impl Iterator<Item = &Session> {
+        let start = self.current_page() * PAGE_SIZE;
+        let end = (start + PAGE_SIZE).min(self.visible.len());
+        self.visible[start..end].iter().map(|&i| &self.sessions[i])
+    }
+
     /// Number of sessions visible under the active filter.
     pub fn visible_count(&self) -> usize {
         self.visible.len()
@@ -170,6 +199,24 @@ impl TuiState {
     /// Selects the last visible session.
     pub fn select_last(&mut self) {
         self.selected = self.visible.len().saturating_sub(1);
+        self.preview_scroll = 0;
+    }
+
+    /// Moves the selection to the first session of the next page, clamping to
+    /// the last session when already on the final page.
+    pub fn next_page(&mut self) {
+        if self.visible.is_empty() {
+            return;
+        }
+        let start = (self.current_page() + 1) * PAGE_SIZE;
+        self.selected = start.min(self.visible.len() - 1);
+        self.preview_scroll = 0;
+    }
+
+    /// Moves the selection to the first session of the previous page, staying on
+    /// the first page when already there.
+    pub fn previous_page(&mut self) {
+        self.selected = self.current_page().saturating_sub(1) * PAGE_SIZE;
         self.preview_scroll = 0;
     }
 
@@ -366,6 +413,44 @@ mod tests {
         assert_eq!(state.selected_index(), before);
         state.scroll_preview_up(10); // saturates at 0
         assert_eq!(state.preview_scroll(), 0);
+    }
+
+    #[test]
+    fn pagination_splits_visible_into_pages_of_25() {
+        let many: Vec<Session> = (0..60)
+            .map(|i| session(&format!("Session {i}"), ProviderKind::Claude, &["x"]))
+            .collect();
+        let mut state = TuiState::new(many);
+        assert_eq!(state.page_count(), 3);
+        assert_eq!(state.current_page(), 0);
+        assert_eq!(state.page_sessions().count(), 25);
+
+        state.next_page();
+        assert_eq!(state.current_page(), 1);
+        assert_eq!(state.selected_index(), 25);
+        assert_eq!(state.selected_on_page(), 0);
+        assert_eq!(state.page_sessions().count(), 25);
+
+        state.next_page();
+        assert_eq!(state.current_page(), 2);
+        assert_eq!(state.page_sessions().count(), 10);
+
+        // Already on the last page; selection clamps to the final session.
+        state.next_page();
+        assert_eq!(state.current_page(), 2);
+        assert_eq!(state.selected_index(), 59);
+
+        state.previous_page();
+        assert_eq!(state.current_page(), 1);
+        assert_eq!(state.selected_index(), 25);
+    }
+
+    #[test]
+    fn single_page_when_under_limit() {
+        let state = sample();
+        assert_eq!(state.page_count(), 1);
+        assert_eq!(state.current_page(), 0);
+        assert_eq!(state.page_sessions().count(), 3);
     }
 
     #[test]
