@@ -116,6 +116,34 @@ impl crate::providers::Provider for FakeProvider {
         cmd.arg(format!("resume {}", session.id));
         Ok(cmd)
     }
+
+    fn read_messages(&self, session: &Session, _config: &AppConfig) -> Result<Vec<MessagePreview>> {
+        // A fixture on disk is re-parsed in full; built-in sessions have a
+        // synthetic path, so they are reconstructed by id instead.
+        if let Ok(raw) = std::fs::read_to_string(&session.source_path)
+            && let Ok(parsed) = serde_json::from_str::<FakeSessionFile>(&raw)
+        {
+            return Ok(messages_of(parsed.messages));
+        }
+        let restored = builtin_files()
+            .into_iter()
+            .find(|f| f.id == session.provider_session_id)
+            .map(|f| messages_of(f.messages))
+            .unwrap_or_default();
+        Ok(restored)
+    }
+}
+
+/// Maps fixture messages to normalized previews, untruncated, for export.
+fn messages_of(messages: Vec<FakeMessage>) -> Vec<MessagePreview> {
+    messages
+        .into_iter()
+        .map(|m| MessagePreview {
+            role: m.role,
+            content: m.content,
+            timestamp: m.timestamp,
+        })
+        .collect()
 }
 
 /// On-disk JSON shape for a fake session fixture.
@@ -180,7 +208,20 @@ fn preview_from(messages: Vec<FakeMessage>, turns: usize) -> Vec<MessagePreview>
 /// fixture directory is configured. They are constructed through the same
 /// [`FakeSessionFile::into_session`] path as on-disk fixtures.
 fn builtin_sessions(preview_turns: usize) -> Vec<Session> {
-    [
+    builtin_files()
+        .into_iter()
+        .map(|file| {
+            let source = PathBuf::from(format!("<builtin>/{}.json", file.id));
+            file.into_session(source, preview_turns)
+        })
+        .collect()
+}
+
+/// The raw built-in fixtures, before normalization. Exposed separately so the
+/// full conversation can be reconstructed for export, where the synthetic
+/// source path cannot be re-read.
+fn builtin_files() -> Vec<FakeSessionFile> {
+    vec![
         FakeSessionFile {
             id: "alpha-notes-0001".to_string(),
             name: "Alpha Notes".to_string(),
@@ -189,7 +230,10 @@ fn builtin_sessions(preview_turns: usize) -> Vec<Session> {
             date_last_used: Some(at(2026, 6, 10, 11, 55)),
             message_count: Some(87),
             messages: turns(&[
-                (Role::User, "Can you outline the next steps for this project?"),
+                (
+                    Role::User,
+                    "Can you outline the next steps for this project?",
+                ),
                 (
                     Role::Assistant,
                     "Here are the next steps, grouped by priority so we can tackle them in order.",
@@ -209,7 +253,10 @@ fn builtin_sessions(preview_turns: usize) -> Vec<Session> {
             date_last_used: Some(at(2026, 6, 10, 11, 0)),
             message_count: Some(22),
             messages: turns(&[
-                (Role::User, "How should the service handle its configuration?"),
+                (
+                    Role::User,
+                    "How should the service handle its configuration?",
+                ),
                 (
                     Role::Assistant,
                     "Store configuration in a single file with sensible defaults for each setting.",
@@ -224,7 +271,10 @@ fn builtin_sessions(preview_turns: usize) -> Vec<Session> {
             date_last_used: Some(at(2026, 6, 9, 12, 0)),
             message_count: Some(14),
             messages: turns(&[
-                (Role::User, "Draft an outline for an article on developer tools."),
+                (
+                    Role::User,
+                    "Draft an outline for an article on developer tools.",
+                ),
                 (
                     Role::Assistant,
                     "Here is a five-section outline to start from, beginning with the introduction.",
@@ -232,12 +282,6 @@ fn builtin_sessions(preview_turns: usize) -> Vec<Session> {
             ]),
         },
     ]
-    .into_iter()
-    .map(|file| {
-        let source = PathBuf::from(format!("<builtin>/{}.json", file.id));
-        file.into_session(source, preview_turns)
-    })
-    .collect()
 }
 
 /// Fixed UTC timestamp helper for built-in sample data.

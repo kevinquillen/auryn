@@ -18,7 +18,7 @@ use std::process::Command;
 
 use crate::config::AppConfig;
 use crate::errors::Result;
-use crate::models::{ProviderKind, Session};
+use crate::models::{MessagePreview, ProviderKind, Session};
 
 /// Discovers and resumes sessions for a single AI coding tool.
 pub trait Provider {
@@ -42,6 +42,12 @@ pub trait Provider {
     /// Builds the native command that resumes `session`. Implementations must
     /// construct the command argument-by-argument and never invoke a shell.
     fn resume_command(&self, session: &Session, config: &AppConfig) -> Result<Command>;
+
+    /// Reads the full, untruncated conversation for `session`, in chronological
+    /// order, for export. Unlike the bounded preview built during [`scan`], this
+    /// retains every readable turn. Implementations re-read the session's
+    /// `source_path` and apply the same untrusted-input safeguards as `scan`.
+    fn read_messages(&self, session: &Session, config: &AppConfig) -> Result<Vec<MessagePreview>>;
 }
 
 /// Builds the set of active providers for the given configuration.

@@ -24,7 +24,7 @@ use directories::BaseDirs;
 use serde_json::Value;
 
 use crate::config::{AppConfig, ProviderSettings};
-use crate::errors::Result;
+use crate::errors::{AurynError, Result};
 use crate::models::{MessagePreview, ProviderKind, Role, Session};
 use crate::providers::Provider;
 use crate::providers::util::{
@@ -117,6 +117,45 @@ impl Provider for ClaudeProvider {
         apply_working_dir(&mut command, session.project_path.as_deref());
         Ok(command)
     }
+
+    fn read_messages(&self, session: &Session, config: &AppConfig) -> Result<Vec<MessagePreview>> {
+        collect_messages(&session.source_path, config)
+    }
+}
+
+/// Reads every readable user/assistant turn from a session file in file order,
+/// untruncated, for export. Applies the same size bound and tolerant line
+/// parsing as [`parse_session`]; a file over the limit is an error rather than
+/// a silent truncation.
+fn collect_messages(path: &Path, config: &AppConfig) -> Result<Vec<MessagePreview>> {
+    let metadata = std::fs::metadata(path)?;
+    if metadata.len() > config.max_file_bytes {
+        return Err(AurynError::FileTooLarge {
+            path: path.to_path_buf(),
+            size: metadata.len(),
+        });
+    }
+
+    let reader = BufReader::new(File::open(path)?);
+    let mut messages = Vec::new();
+    for line in reader.lines() {
+        let Ok(line) = line else { continue };
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        let Ok(record) = serde_json::from_str::<Value>(trimmed) else {
+            continue;
+        };
+        if let Some((role, text, timestamp)) = message_from_record(&record) {
+            messages.push(MessagePreview {
+                role,
+                content: text,
+                timestamp,
+            });
+        }
+    }
+    Ok(messages)
 }
 
 /// Returns the immediate subdirectories of `root`, tolerating IO errors.
@@ -249,32 +288,9 @@ fn absorb_record(builder: &mut Builder, record: &Value, preview_turns: usize) {
         builder.ai_title = Some(normalize_whitespace(title));
     }
 
-    if record_type != "user" && record_type != "assistant" {
+    let Some((role, text, timestamp)) = message_from_record(record) else {
         return;
-    }
-    if flag(record, "isMeta") || flag(record, "isSidechain") {
-        return;
-    }
-
-    let message = match record.get("message") {
-        Some(message) => message,
-        None => return,
     };
-    let text = extract_text(message.get("content"));
-    if text.trim().is_empty() {
-        return; // Pure tool-use/result turns carry no readable text.
-    }
-
-    let role = match message.get("role").and_then(Value::as_str) {
-        Some("assistant") => Role::Assistant,
-        Some("system") => Role::System,
-        _ => Role::User,
-    };
-    let content = truncate_chars(&text, MAX_PREVIEW_CHARS);
-    let timestamp = record
-        .get("timestamp")
-        .and_then(Value::as_str)
-        .and_then(parse_timestamp);
 
     if role == Role::User && builder.first_user_text.is_none() {
         // Names appear in a single table row, so collapse any newlines first.
@@ -288,10 +304,40 @@ fn absorb_record(builder: &mut Builder, record: &Value, preview_turns: usize) {
         }
         builder.preview.push_back(MessagePreview {
             role,
-            content,
+            content: truncate_chars(&text, MAX_PREVIEW_CHARS),
             timestamp,
         });
     }
+}
+
+/// Extracts a conversational turn from a record, or `None` when it is not a
+/// readable user/assistant message (wrong type, meta/sidechain, or text-less
+/// tool use). The returned text is untruncated; callers bound it as needed.
+fn message_from_record(record: &Value) -> Option<(Role, String, Option<DateTime<Utc>>)> {
+    let record_type = record.get("type").and_then(Value::as_str).unwrap_or("");
+    if record_type != "user" && record_type != "assistant" {
+        return None;
+    }
+    if flag(record, "isMeta") || flag(record, "isSidechain") {
+        return None;
+    }
+
+    let message = record.get("message")?;
+    let text = extract_text(message.get("content"));
+    if text.trim().is_empty() {
+        return None; // Pure tool-use/result turns carry no readable text.
+    }
+
+    let role = match message.get("role").and_then(Value::as_str) {
+        Some("assistant") => Role::Assistant,
+        Some("system") => Role::System,
+        _ => Role::User,
+    };
+    let timestamp = record
+        .get("timestamp")
+        .and_then(Value::as_str)
+        .and_then(parse_timestamp);
+    Some((role, text, timestamp))
 }
 
 /// Extracts readable text from a message `content` value, which is either a
