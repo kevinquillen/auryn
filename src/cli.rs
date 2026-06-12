@@ -6,14 +6,16 @@
 //! human table or as JSON via `--json` for machine consumption.
 
 use std::io::Write;
+use std::path::PathBuf;
 use std::process::Command;
 
 use chrono::Utc;
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 
 use crate::app::{App, ScanOutcome};
 use crate::config::AppConfig;
 use crate::errors::{AurynError, Result};
+use crate::export;
 use crate::format;
 use crate::models::Session;
 use crate::paths;
@@ -60,6 +62,18 @@ pub enum CommandKind {
         /// provider prefix is required; run `auryn list --json` to see full ids.
         session_id: String,
     },
+    /// Export a session's full conversation as Markdown or JSON.
+    Export {
+        /// Session id in the form provider:session_id, e.g. `codex:abc-123`.
+        /// Run `auryn list --json` to see full ids.
+        session_id: String,
+        /// Output format.
+        #[arg(long, value_enum, default_value_t = ExportFormat::Md)]
+        format: ExportFormat,
+        /// Write to this file instead of standard output.
+        #[arg(long)]
+        out: Option<PathBuf>,
+    },
     /// Report environment, configuration, and provider discovery status.
     Doctor,
     /// Inspect and manage configuration.
@@ -67,6 +81,24 @@ pub enum CommandKind {
         #[command(subcommand)]
         action: ConfigAction,
     },
+}
+
+/// Output format for `auryn export`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
+pub enum ExportFormat {
+    /// Human-readable Markdown.
+    Md,
+    /// Machine-readable JSON.
+    Json,
+}
+
+impl From<ExportFormat> for export::Format {
+    fn from(value: ExportFormat) -> Self {
+        match value {
+            ExportFormat::Md => export::Format::Markdown,
+            ExportFormat::Json => export::Format::Json,
+        }
+    }
 }
 
 /// `auryn config` actions.
@@ -92,6 +124,11 @@ pub fn run() -> Result<i32> {
         Some(CommandKind::Filter { query, json }) => cmd_filter(&query, json),
         Some(CommandKind::Search { query, json }) => cmd_filter(&query, json),
         Some(CommandKind::Resume { session_id }) => cmd_resume(&session_id),
+        Some(CommandKind::Export {
+            session_id,
+            format,
+            out,
+        }) => cmd_export(&session_id, format, out.as_deref()),
         Some(CommandKind::Doctor) => cmd_doctor(),
         Some(CommandKind::Config { action }) => cmd_config(action),
     }
@@ -126,6 +163,37 @@ fn cmd_resume(session_id: &str) -> Result<i32> {
     let command = app.resume_command(session_id)?;
     // Hand off the terminal to the provider's CLI and return its exit code.
     crate::launcher::run(command)
+}
+
+/// Reads a session's full conversation and renders it to stdout or a file.
+/// Writing to stdout treats a closed downstream pipe as a clean exit, matching
+/// the other read-only subcommands.
+fn cmd_export(
+    session_id: &str,
+    format: ExportFormat,
+    out: Option<&std::path::Path>,
+) -> Result<i32> {
+    let app = App::load()?;
+    let transcript = app.transcript(session_id)?;
+    let rendered = transcript.render(format.into())?;
+
+    match out {
+        Some(path) => {
+            std::fs::write(path, rendered)?;
+            eprintln!("Exported {session_id} to {}", path.display());
+        }
+        None => {
+            let stdout = std::io::stdout();
+            let mut handle = stdout.lock();
+            if let Err(err) = handle.write_all(rendered.as_bytes()) {
+                if err.kind() == std::io::ErrorKind::BrokenPipe {
+                    return Ok(0);
+                }
+                return Err(err.into());
+            }
+        }
+    }
+    Ok(0)
 }
 
 fn cmd_doctor() -> Result<i32> {
