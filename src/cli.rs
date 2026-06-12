@@ -53,9 +53,11 @@ pub enum CommandKind {
         #[arg(long)]
         json: bool,
     },
-    /// Resume a session by id using the provider's native CLI.
+    /// Resume a session using the provider's native CLI. The id must include its
+    /// provider prefix, in the form provider:session_id.
     Resume {
-        /// The Auryn session id, e.g. `claude:abc-123`.
+        /// Session id in the form provider:session_id, e.g. `codex:abc-123`. The
+        /// provider prefix is required; run `auryn list --json` to see full ids.
         session_id: String,
     },
     /// Report environment, configuration, and provider discovery status.
