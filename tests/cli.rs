@@ -229,3 +229,13 @@ fn resume_unknown_session_fails() {
     let out = auryn(&["resume", "fake:does-not-exist"], true);
     assert!(!out.status.success());
 }
+
+#[test]
+fn resume_without_provider_prefix_is_rejected_with_guidance() {
+    // A bare native id (what a provider CLI prints) lacks the provider prefix
+    // resume needs, so it must fail with a message that states the form.
+    let out = auryn(&["resume", "abc-123"], true);
+    assert!(!out.status.success());
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(stderr.contains("provider:session_id"));
+}

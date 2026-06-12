@@ -80,26 +80,28 @@ impl App {
         provider.resume_command(session, &self.config)
     }
 
-    /// Builds the native resume command for a session id (the CLI path). Only
-    /// the provider named by the id prefix (e.g. `claude:`) is scanned, so a
-    /// resume does not re-parse the other providers' sessions.
+    /// Builds the native resume command for a session id (the CLI path). The id
+    /// must carry its provider prefix (e.g. `codex:abc-123`); the bare native id
+    /// a provider prints is not enough, because the prefix is what selects the
+    /// client to resume. Only that provider is scanned, so a resume does not
+    /// re-parse the other providers' sessions.
     pub fn resume_command(&self, session_id: &str) -> Result<Command> {
-        let wanted = session_id
+        let kind = session_id
             .split_once(':')
-            .and_then(|(prefix, _)| prefix.parse::<ProviderKind>().ok());
+            .and_then(|(prefix, _)| prefix.parse::<ProviderKind>().ok())
+            .ok_or_else(|| AurynError::MalformedSessionId(session_id.to_string()))?;
 
-        for provider in &self.providers {
-            if let Some(kind) = wanted
-                && provider.kind() != kind
-            {
-                continue;
-            }
-            let sessions = provider.scan(&self.config)?;
-            if let Some(session) = sessions.into_iter().find(|s| s.id == session_id) {
-                return provider.resume_command(&session, &self.config);
-            }
+        let provider = self
+            .providers
+            .iter()
+            .find(|p| p.kind() == kind)
+            .ok_or_else(|| AurynError::UnknownSession(session_id.to_string()))?;
+
+        let sessions = provider.scan(&self.config)?;
+        match sessions.into_iter().find(|s| s.id == session_id) {
+            Some(session) => provider.resume_command(&session, &self.config),
+            None => Err(AurynError::UnknownSession(session_id.to_string())),
         }
-        Err(AurynError::UnknownSession(session_id.to_string()))
     }
 }
 

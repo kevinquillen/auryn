@@ -29,6 +29,11 @@ pub enum AurynError {
     #[error("no provider supports session id: {0}")]
     UnknownSession(String),
 
+    #[error(
+        "session id '{0}' is missing its provider prefix; resume expects provider:session_id (for example codex:{0}). Run 'auryn list --json' to see full session ids."
+    )]
+    MalformedSessionId(String),
+
     #[error(transparent)]
     Io(#[from] std::io::Error),
 
