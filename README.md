@@ -89,6 +89,9 @@ auryn list --json          # machine-readable output
 auryn filter "open tasks"  # filter by text
 auryn search "config"      # alias for filter
 auryn resume <session-id>  # resume a session by id
+auryn export <session-id>             # export a full conversation as Markdown
+auryn export <session-id> --format json
+auryn export <session-id> --out chat.md
 auryn doctor               # environment and discovery diagnostics
 auryn config path          # print the config file path
 auryn config print         # print the effective config
@@ -101,6 +104,15 @@ auryn config edit          # open the config in $EDITOR
 Search matches session metadata (name, provider, project path) fuzzily and
 recent conversation content (the preview turns) as a case-insensitive substring,
 and ranks the best matches first. See `docs/search.md`.
+
+## Export
+
+`auryn export <session-id>` reads a session's full, untruncated conversation and
+renders it as Markdown (default) or JSON (`--format json`), to standard output or
+a file (`--out <path>`). The id uses the same `provider:session_id` form as
+resume. Export is read-only and never writes provider state; it is the basis for
+archiving a conversation or carrying its content into a new session in another
+tool. See `docs/export.md`.
 
 ## Configuration
 
@@ -121,6 +133,7 @@ spawns provider commands directly, never through a shell. See `SECURITY.md` and
 * `docs/configuration.md` - configuration reference
 * `docs/providers.md` - how each provider is discovered and resumed
 * `docs/search.md` - search and filtering behavior
+* `docs/export.md` - exporting a conversation as Markdown or JSON
 * `docs/release.md` - release and packaging process
 * `docs/adr/` - architectural decision records
 
